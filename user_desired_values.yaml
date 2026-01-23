@@ -1,0 +1,194 @@
+global:
+  nodePortPrefix: 302
+  nodePortPrefixExt: 304
+  masterPassword: secretpassword
+  addTestingComponents: true
+  cmpv2Enabled: false
+  flavor: unlimited
+  repository: &nexusDockerProxyRepo nexus3.onap.org:10001
+  dockerHubRepository: *nexusDockerProxyRepo
+  imageRegistry: *nexusDockerProxyRepo
+  readinessRepository: oomk8s
+  loggingRepository: docker.elastic.co
+  pullPolicy: IfNotPresent
+  prometheusEnabled: false
+  persistence:
+    mountPath: /dockerdata-nfs
+    storageClass: &smo-sc smo-storage
+  debugEnabled: false
+  mariadbGalera:
+    useOperator: true
+    enableServiceAccount: false
+  ingress:
+    enabled: false
+    provider: ingress
+
+a1policymanagement:
+  enabled: false
+cps:
+  enabled: false  # DISABLED 
+dcaegen2-services:
+  enabled: true
+  dcae-bbs-eventprocessor-ms:
+    enabled: false
+  dcae-datafile-collector:
+    enabled: false
+  dcae-datalake-admin-ui:
+    enabled: false
+  dcae-datalake-des:
+    enabled: false
+  dcae-datalake-feeder:
+    enabled: false
+  dcae-heartbeat:
+    enabled: false
+  dcae-hv-ves-collector:
+    enabled: false
+  dcae-kpi-ms:
+    enabled: false
+  dcae-ms-healthcheck:
+    enabled: false
+  dcae-pm-mapper:
+    enabled: false
+  dcae-pmsh:
+    enabled: false
+  dcae-prh:
+    enabled: false
+  dcae-restconf-collector:
+    enabled: false
+  dcae-slice-analysis-ms:
+    enabled: false
+  dcae-snmptrap-collector:
+    enabled: false
+  dcae-son-handler:
+    enabled: false
+  dcae-tcagen2:
+    enabled: false
+  dcae-ves-collector:
+    enabled: true
+  dcae-ves-mapper:
+    enabled: false
+  dcae-ves-openapi-manager:
+    enabled: false
+mariadb-galera:
+  enabled: true
+  replicaCount: 1
+  mariadbOperator:
+    appVersion: 11.1.2
+    persistence:
+      storageClassName: *smo-sc
+    livenessProbe:
+      initialDelaySeconds: 150
+    readinessProbe:
+      initialDelaySeconds: 150
+    startupProbe:
+      initialDelaySeconds: 150
+    galera:
+      enabled: false
+postgres:
+  enabled: true
+policy:
+  enabled: true
+  policy-api:
+    enabled: true
+  policy-pap:
+    enabled: true
+  policy-xacml-pdp:
+    enabled: false
+  policy-apex-pdp:
+    enabled: true
+  policy-drools-pdp:
+    enabled: false
+  policy-distribution:
+    enabled: false
+  policy-clamp-runtime-acm:
+    enabled: true
+  policy-clamp-ac-k8s-ppnt:
+    enabled: true
+    repoList:
+      helm:
+        repos:
+          - repoName: kong
+            address: https://charts.konghq.com
+          - repoName: bitnami
+            address: https://charts.bitnami.com/bitnami
+  policy-gui:
+    enabled: false
+  policy-nexus:
+    enabled: false
+  policy-clamp-ac-pf-ppnt:
+    enabled: true
+  policy-clamp-ac-http-ppnt:
+    enabled: true
+  policy-clamp-ac-a1pms-ppnt:
+    enabled: true
+    a1pmsconfig:
+      a1pms:
+        baseUrl: http://policymanagementservice.nonrtric:8081
+  policy-clamp-ac-kserve-ppnt:
+    enabled: true
+  policy-opa-pdp:
+    enabled: false
+sdnc:
+  enabled: true
+  image: onap/sdnc-image:2.6.1
+  replicaCount: 1
+  elasticsearch:
+    enabled: false
+  mysql:
+    replicaCount: 1
+  ueb-listener:
+    enabled: false
+    image: onap/sdnc-ueb-listener-image:2.6.1
+  sdnc-ansible-server:
+    enabled: true
+    image: onap/sdnc-ansible-server-image:2.6.1
+  dgbuilder:
+    enabled: false
+  cds:
+    enabled: false
+  network-name-gen:
+    enabled: false
+  sdnc-web:
+    image: onap/sdnc-web-image:2.6.1
+  config:
+    sdnr:
+      enabled: true
+      mode: dm
+      sdnronly: true
+      sdnrdbTrustAllCerts: true
+      mountpointRegistrarEnabled: true
+      mountpointStateProviderEnabled: true
+      netconfCallHome:
+        enabled: true
+      kafka:
+        enabled: true
+      mariadb:
+        enabled: true
+strimzi:
+  enabled: true
+  replicaCount: 1
+
+# ORAN/Non-RT-RIC Configuration - ALL DISABLED
+nonrtric:
+  installPms: false
+  installA1controller: false
+  installA1simulator: false
+  installControlpanel: false
+  installInformationservice: false
+  installNonrtricgateway: false
+  installKong: false
+  installTopology: false
+  installDmaapadapterservice: false
+  installDmeparticipant: false
+  installrAppmanager: false
+  installCapifcore: false
+  installServicemanager: false
+  installRanpm: false
+  secrets: []
+
+common:
+  enabled: false
+
+smo:
+  installTeiv: false
+  secrets: []

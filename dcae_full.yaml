@@ -1,0 +1,384 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: dcae-ves-collector
+    app.kubernetes.io/instance: onap-dcaegen2-services
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dcae-ves-collector
+    dcaeMicroserviceName: onap-dcae-ves-collector
+    helm.sh/chart: dcae-ves-collector-13.1.1
+    version: Oslo
+  name: onap-dcae-ves-collector
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: onap
+      app.kubernetes.io/name: dcae-ves-collector
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/rewriteAppHTTPProbers: 'false'
+      creationTimestamp: null
+      labels:
+        app: dcae-ves-collector
+        app.kubernetes.io/instance: onap
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: dcae-ves-collector
+        helm.sh/chart: dcae-ves-collector-13.1.1
+        version: Oslo
+      name: dcae-ves-collector
+    spec:
+      containers:
+      - env:
+        - name: DCAE_CA_CERTPATH
+          value: /opt/app/dcae-certificate/cacert.pem
+        - name: CONSUL_HOST
+          value: consul-server.onap
+        - name: CONFIG_BINDING_SERVICE
+          value: config-binding-service
+        - name: CBS_CONFIG_URL
+          value: https://config-binding-service:10443/service_component_all/dcae-ves-collector
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: BOOTSTRAP_SERVERS
+          value: onap-strimzi-kafka-bootstrap:9092
+        - name: CBS_CLIENT_CONFIG_PATH
+          value: /app-config-input/application_config.yaml
+        - name: JAAS_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: sasl.jaas.config
+              name: dcae-ves-collector-ku
+        - name: LOG4J_FORMAT_MSG_NO_LOOKUPS
+          value: 'true'
+        image: nexus3.onap.org:10001/onap/org.onap.dcaegen2.collectors.ves.vescollector:1.12.4
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthcheck
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: dcae-ves-collector
+        ports:
+        - containerPort: 8443
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthcheck
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app-config
+          name: app-config-input
+        - mountPath: /app-config-input
+          name: app-config-input
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /opt/app/VESCollector/logs
+          name: logs
+        - mountPath: /opt/app/dcae-certificate
+          name: tls-info
+        - mountPath: /opt/app/VESCollector/etc
+          name: ves-collector-etc
+      - image: docker.elastic.co/beats/filebeat:5.5.0
+        imagePullPolicy: IfNotPresent
+        name: dcae-ves-collector-filebeat
+        resources:
+          limits:
+            cpu: 100m
+            memory: 20Mi
+          requests:
+            cpu: 10m
+            memory: 5Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /usr/share/filebeat/filebeat.yml
+          name: filebeat-conf
+          subPath: filebeat.yml
+        - mountPath: /opt/app/VESCollector/logs
+          name: sidecar-logs
+        - mountPath: /usr/share/filebeat/data
+          name: filebeat-data
+      dnsPolicy: ClusterFirst
+      hostname: dcae-ves-collector
+      initContainers:
+      - command:
+        - cp
+        - -R
+        - /opt/app/VESCollector/etc/.
+        - /opt/app/VESCollector/etc_rw/
+        image: nexus3.onap.org:10001/onap/org.onap.dcaegen2.collectors.ves.vescollector:1.12.4
+        imagePullPolicy: Always
+        name: dcae-ves-collector-copy-etc
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 30m
+            memory: 32Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/app/VESCollector/etc_rw
+          name: ves-collector-etc
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-dcae-ves-collector-read
+      serviceAccountName: onap-dcae-ves-collector-read
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: onap-dcae-ves-collector-application-config-configmap
+        name: app-config-input
+      - emptyDir:
+          medium: Memory
+        name: app-config
+      - emptyDir:
+          sizeLimit: 128Mi
+        name: tmp
+      - emptyDir:
+          sizeLimit: 128Mi
+        name: logs
+      - configMap:
+          defaultMode: 420
+          name: onap-dcaegen2-services-filebeat
+        name: filebeat-conf
+      - emptyDir: {}
+        name: filebeat-data
+      - emptyDir: {}
+        name: sidecar-logs
+      - emptyDir: {}
+        name: tls-info
+      - emptyDir:
+          sizeLimit: 50Mi
+        name: ves-collector-etc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: dcae-ves-collector
+    app.kubernetes.io/instance: onap-dcaegen2-services
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dcae-ves-collector
+    helm.sh/chart: dcae-ves-collector-13.1.1
+    version: Oslo
+  name: dcae-ves-collector
+  namespace: onap
+spec:
+  clusterIP: 10.98.137.74
+  clusterIPs:
+  - 10.98.137.74
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: PreferDualStack
+  ports:
+  - name: https-http
+    nodePort: 30417
+    port: 8443
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/instance: onap
+    app.kubernetes.io/name: dcae-ves-collector
+  sessionAffinity: None
+  type: NodePort
+---
+apiVersion: v1
+data:
+  expected-components.json: '
+
+
+    ["dcae-ves-collector"]
+
+    '
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-dcaegen2-services
+  name: onap-dcae-expected-microservices
+  namespace: onap
+---
+apiVersion: v1
+data:
+  schema-map.json: "[\n  {\n    \"publicURL\": \"https://forge.3gpp.org/rep/sa5/MnS/blob/SA88-Rel16/OpenAPI/faultMnS.yaml\"\
+    ,\n    \"localURL\": \"3gpp/rep/sa5/MnS/blob/SA88-Rel16/OpenAPI/faultMnS.yaml\"\
+    \n  },\n  {\n    \"publicURL\": \"https://forge.3gpp.org/rep/sa5/MnS/blob/SA88-Rel16/OpenAPI/heartbeatNtf.yaml\"\
+    ,\n    \"localURL\": \"3gpp/rep/sa5/MnS/blob/SA88-Rel16/OpenAPI/heartbeatNtf.yaml\"\
+    \n  },\n  {\n    \"publicURL\": \"https://forge.3gpp.org/rep/sa5/MnS/blob/SA88-Rel16/OpenAPI/PerDataFileReportMnS.yaml\"\
+    ,\n    \"localURL\": \"3gpp/rep/sa5/MnS/blob/SA88-Rel16/OpenAPI/PerDataFileReportMnS.yaml\"\
+    \n  },\n  {\n    \"publicURL\": \"https://forge.3gpp.org/rep/sa5/MnS/blob/SA88-Rel16/OpenAPI/provMnS.yaml\"\
+    ,\n    \"localURL\": \"3gpp/rep/sa5/MnS/blob/SA88-Rel16/OpenAPI/provMnS.yaml\"\
+    \n  }\n]"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-dcaegen2-services
+  name: onap-dcae-external-repo-configmap-schema-map
+  namespace: onap
+---
+apiVersion: v1
+data:
+  application_config.yaml: "auth.method: noAuth\ncollector.dmaap.streamid: fault=ves-fault|syslog=ves-syslog|heartbeat=ves-heartbeat|measurement=ves-measurement|measurementsForVfScaling=ves-measurement|mobileFlow=ves-mobileflow|other=ves-other|stateChange=ves-statechange|thresholdCrossingAlert=ves-thresholdCrossingAlert|voiceQuality=ves-voicequality|sipSignaling=ves-sipsignaling|notification=ves-notification|pnfRegistration=ves-pnfRegistration|3GPP-FaultSupervision=ves-3gpp-fault-supervision|3GPP-Heartbeat=ves-3gpp-heartbeat|3GPP-Provisioning=ves-3gpp-provisioning|3GPP-PerformanceAssurance=ves-3gpp-performance-assurance\n\
+    collector.dynamic.config.update.frequency: \"5\"\ncollector.externalSchema.checkflag:\
+    \ 1\ncollector.externalSchema.mappingFileLocation: ./etc/externalRepo/schema-map.json\n\
+    collector.externalSchema.schemasLocation: ./etc/externalRepo/\ncollector.inputQueue.maxPending:\
+    \ \"8096\"\ncollector.keystore.file.location: /opt/app/dcae-certificate/cert.jks\n\
+    collector.keystore.passwordfile: /opt/app/dcae-certificate/jks.pass\ncollector.schema.checkflag:\
+    \ \"1\"\ncollector.schema.file: '{\"v1\":\"./etc/CommonEventFormat_27.2.json\"\
+    ,\"v2\":\"./etc/CommonEventFormat_27.2.json\",\"v3\":\"./etc/CommonEventFormat_27.2.json\"\
+    ,\"v4\":\"./etc/CommonEventFormat_27.2.json\",\"v5\":\"./etc/CommonEventFormat_28.4.1.json\"\
+    ,\"v7\":\"./etc/CommonEventFormat_30.2.1_ONAP.json\"}'\ncollector.service.port:\
+    \ \"8080\"\ncollector.service.secure.port: \"8443\"\ncollector.truststore.file.location:\
+    \ /opt/app/dcae-certificate/trust.jks\ncollector.truststore.passwordfile: /opt/app/dcae-certificate/trust.pass\n\
+    event.externalSchema.schemaRefPath: $.event.stndDefinedFields.schemaReference\n\
+    event.externalSchema.stndDefinedDataPath: $.event.stndDefinedFields.data\nevent.transform.flag:\
+    \ \"0\"\nheader.authlist: sample1,$2a$10$0buh.2WeYwN868YMwnNNEuNEAMNYVU9.FSMJGyIKV3dGET/7oGOi6|demouser,$2a$10$1cc.COcqV/d3iT2N7BjPG.S6ZKv2jpb9a5MV.o7lMih/GpjJRX.Ce\n\
+    services_calls: []\nstreams_publishes:\n  ves-3gpp-fault-supervision:\n    dmaap_info:\n\
+    \      topic_url: http://message-router:3904/events/unauthenticated.SEC_3GPP_FAULTSUPERVISION_OUTPUT\n\
+    \    type: message_router\n  ves-3gpp-heartbeat:\n    dmaap_info:\n      topic_url:\
+    \ http://message-router:3904/events/unauthenticated.SEC_3GPP_HEARTBEAT_OUTPUT\n\
+    \    type: message_router\n  ves-3gpp-performance-assurance:\n    dmaap_info:\n\
+    \      topic_url: http://message-router:3904/events/unauthenticated.SEC_3GPP_PERFORMANCEASSURANCE_OUTPUT\n\
+    \    type: message_router\n  ves-3gpp-provisioning:\n    dmaap_info:\n      topic_url:\
+    \ http://message-router:3904/events/unauthenticated.SEC_3GPP_PROVISIONING_OUTPUT\n\
+    \    type: message_router\n  ves-fault:\n    dmaap_info:\n      topic_url: http://message-router:3904/events/unauthenticated.SEC_FAULT_OUTPUT\n\
+    \    type: message_router\n  ves-heartbeat:\n    dmaap_info:\n      topic_url:\
+    \ http://message-router:3904/events/unauthenticated.SEC_HEARTBEAT_OUTPUT\n   \
+    \ type: message_router\n  ves-measurement:\n    dmaap_info:\n      topic_url:\
+    \ http://message-router:3904/events/unauthenticated.VES_MEASUREMENT_OUTPUT\n \
+    \   type: message_router\n  ves-notification:\n    dmaap_info:\n      topic_url:\
+    \ http://message-router:3904/events/unauthenticated.VES_NOTIFICATION_OUTPUT\n\
+    \    type: message_router\n  ves-other:\n    dmaap_info:\n      topic_url: http://message-router:3904/events/unauthenticated.SEC_OTHER_OUTPUT\n\
+    \    type: message_router\n  ves-pnfRegistration:\n    dmaap_info:\n      topic_url:\
+    \ http://message-router:3904/events/unauthenticated.VES_PNFREG_OUTPUT\n    type:\
+    \ message_router\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: dcae-ves-collector
+    app.kubernetes.io/instance: onap-dcaegen2-services
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dcae-ves-collector
+    helm.sh/chart: dcae-ves-collector-13.1.1
+    version: Oslo
+  name: onap-dcae-ves-collector-application-config-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  filebeat.yml: "\n\nfilebeat.prospectors:\n#it is mandatory, in our case it's log\n\
+    - input_type: log\n  #This is the canolical path as mentioned in logback.xml,\
+    \ *.* means it will monitor all files in the directory.\n  paths:\n    - /var/log/onap/*/*/*/*.log\n\
+    \    - /var/log/onap/*/*/*.log\n    - /var/log/onap/*/*.log\n  #Files older than\
+    \ this should be ignored.In our case it will be 48 hours i.e. 2 days. It is a\
+    \ helping flag for clean_inactive\n  ignore_older: 48h\n  # Remove the registry\
+    \ entry for a file that is more than the specified time. In our case it will be\
+    \ 96 hours, i.e. 4 days. It will help to keep registry records with in limit\n\
+    \  clean_inactive: 96h\n\n\n# Name of the registry file. If a relative path is\
+    \ used, it is considered relative to the\n# data path. Else full qualified file\
+    \ name.\n#filebeat.registry_file: ${path.data}/registry\n\n\noutput.logstash:\n\
+    \  #List of logstash server ip addresses with port number.\n  #But, in our case,\
+    \ this will be the loadbalancer IP address.\n  #For the below property to work\
+    \ the loadbalancer or logstash should expose 5044 port to listen the filebeat\
+    \ events or port in the property should be changed appropriately.\n  hosts: [\"\
+    log-ls.onap:5044\"]\n  #If enable will do load balancing among availabe Logstash,\
+    \ automatically.\n  loadbalance: true\n\n  #The list of root certificates for\
+    \ server verifications.\n  #If certificate_authorities is empty or not set, the\
+    \ trusted\n  #certificate authorities of the host system are used.\n  #ssl.certificate_authorities:\
+    \ $ssl.certificate_authorities\n\n  #The path to the certificate for SSL client\
+    \ authentication. If the certificate is not specified,\n  #client authentication\
+    \ is not available.\n  #ssl.certificate: $ssl.certificate\n\n  #The client certificate\
+    \ key used for client authentication.\n  #ssl.key: $ssl.key\n\n  #The passphrase\
+    \ used to decrypt an encrypted key stored in the configured key file\n  #ssl.key_passphrase:\
+    \ $ssl.key_passphrase\n\nlogging:\n  level: info\n\n  # enable file rotation with\
+    \ default configuration\n  to_files: true\n\n  # do not log to syslog\n  to_syslog:\
+    \ false\n\n  files:\n    path: /usr/share/filebeat/logs\n    name: mybeat.log\n\
+    \    keepfiles: 7\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: dcaegen2-services
+    app.kubernetes.io/instance: onap-dcaegen2-services
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: dcaegen2-services
+    helm.sh/chart: dcaegen2-services-15.0.1
+    version: Oslo
+  name: onap-dcaegen2-services-filebeat
+  namespace: onap
+---
+apiVersion: v1
+data:
+  password: RHQyRVRiNkQyS2QwdnF4QnNBVEVOWFFGQjkzdkNkZ2s=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0iZGNhZS12ZXMtY29sbGVjdG9yLWt1IiBwYXNzd29yZD0iRHQyRVRiNkQyS2QwdnF4QnNBVEVOWFFGQjkzdkNkZ2siOw==
+kind: Secret
+metadata:
+  labels:
+    app: dcae-ves-collector
+    app.kubernetes.io/instance: dcae-ves-collector-ku
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-dcae-ves-collector-ku
+    helm.sh/chart: dcae-ves-collector-13.1.1
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: Oslo
+  name: dcae-ves-collector-ku
+  namespace: onap
+type: Opaque

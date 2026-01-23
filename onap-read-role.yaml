@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"annotations":{},"creationTimestamp":null,"name":"onap-read","namespace":"onap"},"rules":[{"apiGroups":[""],"resources":["services","endpoints","pods","configmaps","secrets"],"verbs":["get","list","watch"]}]}
+  creationTimestamp: "2026-01-23T09:25:07Z"
+  name: onap-read
+  namespace: onap
+  resourceVersion: "1207591"
+  uid: 83fcdced-15ab-4526-b650-22d24dfa4c1b
+rules:
+- apiGroups:
+  - ""
+  - apps
+  resources:
+  - services
+  - endpoints
+  - pods
+  - configmaps
+  - secrets
+  - replicasets
+  - deployments
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch

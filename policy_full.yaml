@@ -1,0 +1,4098 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-apex-pdp
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-apex-pdp
+    helm.sh/chart: policy-apex-pdp-17.0.0
+    version: 17.0.0
+  name: onap-policy-apex-pdp
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: onap
+      app.kubernetes.io/name: policy-apex-pdp
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-apex-pdp
+        app.kubernetes.io/instance: onap
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: policy-apex-pdp
+        helm.sh/chart: policy-apex-pdp-17.0.0
+        version: 17.0.0
+      name: policy-apex-pdp
+    spec:
+      containers:
+      - args:
+        - id policy; cat /home/policy/config/OnapPfConfig.json; /opt/app/policy/apex-pdp/bin/apexOnapPf.sh
+          -c /home/policy/config/OnapPfConfig.json
+        command:
+        - /bin/sh
+        - -cx
+        env:
+        - name: REPLICAS
+          value: '1'
+        image: nexus3.onap.org:10001/onap/policy-apex-pdp:4.2.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 6969
+          timeoutSeconds: 1
+        name: policy-apex-pdp
+        ports:
+        - containerPort: 6969
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 6969
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/log/onap
+          name: policy-logs
+        - mountPath: /home/policy/config
+          name: apexconfig
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - JAASLOGIN=`echo $JAASLOGIN | tr -d '"'`; cd /config-input && for PFILE in
+          `ls -1`; do envsubst <${PFILE} >/config/${PFILE}; done
+        command:
+        - /bin/sh
+        - -cx
+        env:
+        - name: RESTSERVER_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-apex-pdp-restserver-creds
+        - name: RESTSERVER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-apex-pdp-restserver-creds
+        - name: JAASLOGIN
+          valueFrom:
+            secretKeyRef:
+              key: sasl.jaas.config
+              name: policy-apex-pdp-ku
+        - name: KAFKA_URL
+          value: onap-strimzi-kafka-bootstrap:9092
+        - name: SASL
+          value: SCRAM-SHA-512
+        - name: GROUP_ID
+          value: policy-apex
+        - name: PAP_TOPIC
+          value: policy-pdp-pap
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-apex-pdp-update-config
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input
+          name: apexconfig-input
+        - mountPath: /config
+          name: apexconfig
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 103
+        runAsGroup: 103
+        runAsNonRoot: true
+        runAsUser: 101
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-policy-apex-pdp-read
+      serviceAccountName: onap-policy-apex-pdp-read
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir:
+          sizeLimit: 500Mi
+        name: policy-logs
+      - configMap:
+          defaultMode: 493
+          name: onap-policy-apex-pdp-configmap
+        name: apexconfig-input
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 64Mi
+        name: apexconfig
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-api
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-api
+    helm.sh/chart: policy-api-17.0.0
+    version: 17.0.0
+  name: onap-policy-api
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: onap
+      app.kubernetes.io/name: policy-api
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-api
+        app.kubernetes.io/instance: onap
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: policy-api
+        helm.sh/chart: policy-api-17.0.0
+        version: 17.0.0
+      name: policy-api
+    spec:
+      containers:
+      - args:
+        - /opt/app/policy/api/etc/mounted/apiParameters.yaml
+        command:
+        - /opt/app/policy/api/bin/policy-api.sh
+        image: nexus3.onap.org:10001/onap/policy-api:4.2.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 6969
+          timeoutSeconds: 1
+        name: policy-api
+        ports:
+        - containerPort: 6969
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            httpHeaders:
+            - name: Authorization
+              value: Basic cG9saWN5YWRtaW46emIhWHp0RzM0
+            path: /policy/api/v1/healthcheck
+            port: 6969
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 120
+          successThreshold: 1
+          timeoutSeconds: 120
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/log/onap
+          name: logs
+        - mountPath: /tmp
+          name: empty-dir
+          subPath: tmp-dir
+        - mountPath: /opt/app/policy/api/etc/logback.xml
+          name: apiconfig-processed
+          subPath: logback.xml
+        - mountPath: /opt/app/policy/api/etc/mounted
+          name: apiconfig-processed
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - --service-name
+        - policy-pg-primary
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: nexus3.onap.org:10001/onap/oom/readiness:7.0.1
+        imagePullPolicy: IfNotPresent
+        name: policy-api-readiness
+        resources:
+          limits:
+            cpu: 100m
+            memory: 500Mi
+          requests:
+            cpu: 3m
+            memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 65533
+          runAsUser: 100
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      - command:
+        - /bin/sh
+        - -cx
+        - '/docker-entrypoint-initdb.d/db-pg.sh
+
+          '
+        env:
+        - name: PG_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-root-password
+        - name: PG_HOST
+          value: policy-pg-primary
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: PG_USER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: PG_PORT
+          value: '5432'
+        image: nexus3.onap.org:10001/library/postgres:17.2
+        imagePullPolicy: IfNotPresent
+        name: policy-api-pg-config
+        resources:
+          limits:
+            cpu: 300m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /docker-entrypoint-initdb.d/db-pg.sh
+          name: onap-policy-api-config
+          subPath: db-pg.sh
+      - command:
+        - /bin/sh
+        - -cx
+        - '/dbcmd-config/db_migrator_pg_policy_init.sh
+
+          '
+        env:
+        - name: SQL_HOST
+          value: policy-pg-primary
+        - name: SQL_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: SQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: SQL_DB
+          value: policyadmin clampacm pooling operationshistory
+        - name: POLICY_HOME
+          value: /opt/app/policy
+        - name: SCRIPT_DIRECTORY
+          value: postgres
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        image: nexus3.onap.org:10001/onap/policy-db-migrator:4.2.2
+        imagePullPolicy: IfNotPresent
+        name: policy-api-pg-db-migrator
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /dbcmd-config/db_migrator_pg_policy_init.sh
+          name: onap-policy-api-config
+          subPath: db_migrator_pg_policy_init.sh
+        - mountPath: /opt/app/policy/etc/db/
+          name: onap-policy-api-migration-writable
+      - args:
+        - -c
+        - cd /config-input && for PFILE in `ls -1`; do envsubst <${PFILE} >/config/${PFILE};
+          done
+        command:
+        - sh
+        env:
+        - name: SQL_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: SQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: RESTSERVER_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-api-user-creds
+        - name: RESTSERVER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-api-user-creds
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-api-update-config
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input
+          name: apiconfig
+        - mountPath: /config
+          name: apiconfig-processed
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 102
+        runAsGroup: 102
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-policy-api-read
+      serviceAccountName: onap-policy-api-read
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 493
+          name: onap-policy-api-configmap
+        name: apiconfig
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 64Mi
+        name: apiconfig-processed
+      - emptyDir:
+          sizeLimit: 1Gi
+        name: empty-dir
+      - emptyDir:
+          sizeLimit: 500Mi
+        name: logs
+      - emptyDir:
+          sizeLimit: 1Gi
+        name: onap-policy-api-migration-writable
+      - configMap:
+          defaultMode: 493
+          items:
+          - key: db-pg.sh
+            path: db-pg.sh
+          - key: db_migrator_pg_policy_init.sh
+            path: db_migrator_pg_policy_init.sh
+          name: onap-policy-api-db-configmap
+        name: onap-policy-api-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-clamp-ac-a1pms-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-a1pms-ppnt
+    helm.sh/chart: policy-clamp-ac-a1pms-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-a1pms-ppnt
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: onap
+      app.kubernetes.io/name: policy-clamp-ac-a1pms-ppnt
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-clamp-ac-a1pms-ppnt
+        app.kubernetes.io/instance: onap
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: policy-clamp-ac-a1pms-ppnt
+        helm.sh/chart: policy-clamp-ac-a1pms-ppnt-17.0.0
+        version: 17.0.0
+      name: policy-clamp-ac-a1pms-ppnt
+    spec:
+      containers:
+      - args:
+        - /opt/app/policy/clamp/etc/mounted/A1pmsParticipantParameters.yaml
+        command:
+        - /opt/app/policy/clamp/bin/a1pms-participant.sh
+        image: nexus3.onap.org:10001/onap/policy-clamp-ac-a1pms-ppnt:8.2.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-a1pms-api
+          timeoutSeconds: 1
+        name: policy-clamp-ac-a1pms-ppnt
+        ports:
+        - containerPort: 8086
+          name: http-a1pms-api
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-a1pms-api
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/app/policy/clamp/etc/mounted
+          name: ac-a1pms-ppnt-config-processed
+        - mountPath: /var/log/onap
+          name: logs
+        - mountPath: /tmp
+          name: empty-dir
+          subPath: tmp-dir
+        - mountPath: /opt/app/policy/clamp/etc/logback.xml
+          name: ac-a1pms-ppnt-config-processed
+          subPath: logback.xml
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - cd /config-input && for PFILE in `ls -1`; do envsubst <${PFILE} >/config/${PFILE};
+          done
+        command:
+        - sh
+        env:
+        - name: RESTSERVER_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-clamp-ac-a1pms-ppnt-restserver-secret
+        - name: RESTSERVER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-clamp-ac-a1pms-ppnt-restserver-secret
+        - name: SASL_JAAS_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: sasl.jaas.config
+              name: policy-clamp-ac-a1pms-ppnt-ku
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-clamp-ac-a1pms-ppnt-update-config
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input
+          name: ac-a1pms-ppnt-config
+        - mountPath: /config
+          name: ac-a1pms-ppnt-config-processed
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 102
+        runAsGroup: 102
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-policy-clamp-ac-a1pms-ppnt-create
+      serviceAccountName: onap-policy-clamp-ac-a1pms-ppnt-create
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 493
+          name: onap-policy-clamp-ac-a1pms-ppnt-configmap
+        name: ac-a1pms-ppnt-config
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 64Mi
+        name: ac-a1pms-ppnt-config-processed
+      - emptyDir:
+          sizeLimit: 1Gi
+        name: empty-dir
+      - emptyDir:
+          sizeLimit: 500Mi
+        name: logs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-clamp-ac-http-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-http-ppnt
+    helm.sh/chart: policy-clamp-ac-http-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-http-ppnt
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: onap
+      app.kubernetes.io/name: policy-clamp-ac-http-ppnt
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-clamp-ac-http-ppnt
+        app.kubernetes.io/instance: onap
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: policy-clamp-ac-http-ppnt
+        helm.sh/chart: policy-clamp-ac-http-ppnt-17.0.0
+        version: 17.0.0
+      name: policy-clamp-ac-http-ppnt
+    spec:
+      containers:
+      - args:
+        - /opt/app/policy/clamp/etc/mounted/HttpParticipantParameters.yaml
+        command:
+        - /opt/app/policy/clamp/bin/http-participant.sh
+        image: nexus3.onap.org:10001/onap/policy-clamp-ac-http-ppnt:8.2.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-api
+          timeoutSeconds: 1
+        name: policy-clamp-ac-http-ppnt
+        ports:
+        - containerPort: 8084
+          name: http-api
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-api
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/app/policy/clamp/etc/mounted
+          name: ac-http-ppnt-config-processed
+        - mountPath: /var/log/onap
+          name: logs
+        - mountPath: /tmp
+          name: empty-dir
+          subPath: tmp-dir
+        - mountPath: /opt/app/policy/clamp/etc/logback.xml
+          name: ac-http-ppnt-config-processed
+          subPath: logback.xml
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - cd /config-input && for PFILE in `ls -1`; do envsubst <${PFILE} >/config/${PFILE};
+          done
+        command:
+        - sh
+        env:
+        - name: RESTSERVER_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-clamp-ac-http-ppnt-restserver-secret
+        - name: RESTSERVER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-clamp-ac-http-ppnt-restserver-secret
+        - name: SASL_JAAS_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: sasl.jaas.config
+              name: policy-clamp-ac-http-ppnt-ku
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-clamp-ac-http-ppnt-update-config
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input
+          name: ac-http-ppnt-config
+        - mountPath: /config
+          name: ac-http-ppnt-config-processed
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 102
+        runAsGroup: 102
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-policy-clamp-ac-http-ppnt-read
+      serviceAccountName: onap-policy-clamp-ac-http-ppnt-read
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 493
+          name: onap-policy-clamp-ac-http-ppnt-configmap
+        name: ac-http-ppnt-config
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 64Mi
+        name: ac-http-ppnt-config-processed
+      - emptyDir:
+          sizeLimit: 1Gi
+        name: empty-dir
+      - emptyDir:
+          sizeLimit: 500Mi
+        name: logs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-clamp-ac-k8s-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-k8s-ppnt
+    helm.sh/chart: policy-clamp-ac-k8s-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-k8s-ppnt
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: onap
+      app.kubernetes.io/name: policy-clamp-ac-k8s-ppnt
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-clamp-ac-k8s-ppnt
+        app.kubernetes.io/instance: onap
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: policy-clamp-ac-k8s-ppnt
+        helm.sh/chart: policy-clamp-ac-k8s-ppnt-17.0.0
+        version: 17.0.0
+      name: policy-clamp-ac-k8s-ppnt
+    spec:
+      containers:
+      - args:
+        - /opt/app/policy/clamp/etc/mounted/KubernetesParticipantParameters.yaml
+        command:
+        - /opt/app/policy/clamp/bin/kubernetes-participant.sh
+        image: nexus3.onap.org:10001/onap/policy-clamp-ac-k8s-ppnt:8.2.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-api
+          timeoutSeconds: 1
+        name: policy-clamp-ac-k8s-ppnt
+        ports:
+        - containerPort: 8083
+          name: http-api
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-api
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/app/policy/clamp/etc/mounted
+          name: ac-k8s-ppnt-config-processed
+        - mountPath: /var/log/onap
+          name: logs
+        - mountPath: /tmp
+          name: empty-dir
+          subPath: tmp-dir
+        - mountPath: /opt/app/policy/clamp/etc/logback.xml
+          name: ac-k8s-ppnt-config-processed
+          subPath: logback.xml
+        - mountPath: /home/policy/.cache/helm
+          name: helm-cache
+        - mountPath: /home/policy/.config/helm
+          name: helm-config
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - cd /config-input && for PFILE in `ls -1`; do envsubst <${PFILE} >/config/${PFILE};
+          done
+        command:
+        - sh
+        env:
+        - name: RESTSERVER_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-clamp-ac-k8s-ppnt-restserver-secret
+        - name: RESTSERVER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-clamp-ac-k8s-ppnt-restserver-secret
+        - name: SASL_JAAS_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: sasl.jaas.config
+              name: policy-clamp-ac-k8s-ppnt-ku
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-clamp-ac-k8s-ppnt-update-config
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input
+          name: ac-k8s-ppnt-config
+        - mountPath: /config
+          name: ac-k8s-ppnt-config-processed
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 102
+        runAsGroup: 102
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-policy-clamp-ac-k8s-ppnt-create
+      serviceAccountName: onap-policy-clamp-ac-k8s-ppnt-create
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 493
+          name: onap-policy-clamp-ac-k8s-ppnt-configmap
+        name: ac-k8s-ppnt-config
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 64Mi
+        name: ac-k8s-ppnt-config-processed
+      - emptyDir:
+          sizeLimit: 1Gi
+        name: empty-dir
+      - emptyDir:
+          sizeLimit: 500Mi
+        name: logs
+      - emptyDir: {}
+        name: helm-cache
+      - emptyDir: {}
+        name: helm-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-clamp-ac-kserve-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-kserve-ppnt
+    helm.sh/chart: policy-clamp-ac-kserve-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-kserve-ppnt
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: onap
+      app.kubernetes.io/name: policy-clamp-ac-kserve-ppnt
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-clamp-ac-kserve-ppnt
+        app.kubernetes.io/instance: onap
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: policy-clamp-ac-kserve-ppnt
+        helm.sh/chart: policy-clamp-ac-kserve-ppnt-17.0.0
+        version: 17.0.0
+      name: policy-clamp-ac-kserve-ppnt
+    spec:
+      containers:
+      - args:
+        - /opt/app/policy/clamp/etc/mounted/KserveParticipantParameters.yaml
+        command:
+        - /opt/app/policy/clamp/bin/kserve-participant.sh
+        image: nexus3.onap.org:10001/onap/policy-clamp-ac-kserve-ppnt:8.2.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: kserve-api
+          timeoutSeconds: 1
+        name: policy-clamp-ac-kserve-ppnt
+        ports:
+        - containerPort: 8087
+          name: kserve-api
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: kserve-api
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/app/policy/clamp/etc/mounted
+          name: ac-kserve-ppnt-config-processed
+        - mountPath: /var/log/onap
+          name: logs
+        - mountPath: /tmp
+          name: empty-dir
+          subPath: tmp-dir
+        - mountPath: /opt/app/policy/clamp/etc/logback.xml
+          name: ac-kserve-ppnt-config-processed
+          subPath: logback.xml
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - cd /config-input && for PFILE in `ls -1`; do envsubst <${PFILE} >/config/${PFILE};
+          done
+        command:
+        - sh
+        env:
+        - name: RESTSERVER_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-clamp-ac-kserve-ppnt-restserver-secret
+        - name: RESTSERVER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-clamp-ac-kserve-ppnt-restserver-secret
+        - name: SASL_JAAS_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: sasl.jaas.config
+              name: policy-clamp-ac-kserve-ppnt-ku
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-clamp-ac-kserve-ppnt-update-config
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input
+          name: ac-kserve-ppnt-config
+        - mountPath: /config
+          name: ac-kserve-ppnt-config-processed
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 102
+        runAsGroup: 102
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-policy-clamp-ac-kserve-ppnt-create
+      serviceAccountName: onap-policy-clamp-ac-kserve-ppnt-create
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 493
+          name: onap-policy-clamp-ac-kserve-ppnt-configmap
+        name: ac-kserve-ppnt-config
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 64Mi
+        name: ac-kserve-ppnt-config-processed
+      - emptyDir:
+          sizeLimit: 1Gi
+        name: empty-dir
+      - emptyDir:
+          sizeLimit: 500Mi
+        name: logs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-clamp-ac-pf-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-pf-ppnt
+    helm.sh/chart: policy-clamp-ac-pf-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-pf-ppnt
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: onap
+      app.kubernetes.io/name: policy-clamp-ac-pf-ppnt
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-clamp-ac-pf-ppnt
+        app.kubernetes.io/instance: onap
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: policy-clamp-ac-pf-ppnt
+        helm.sh/chart: policy-clamp-ac-pf-ppnt-17.0.0
+        version: 17.0.0
+      name: policy-clamp-ac-pf-ppnt
+    spec:
+      containers:
+      - args:
+        - /opt/app/policy/clamp/etc/mounted/PolicyParticipantParameters.yaml
+        command:
+        - /opt/app/policy/clamp/bin/policy-participant.sh
+        image: nexus3.onap.org:10001/onap/policy-clamp-ac-pf-ppnt:8.2.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-api
+          timeoutSeconds: 1
+        name: policy-clamp-ac-pf-ppnt
+        ports:
+        - containerPort: 8085
+          name: http-api
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-api
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/app/policy/clamp/etc/mounted
+          name: ac-pf-ppnt-config-processed
+        - mountPath: /var/log/onap
+          name: logs
+        - mountPath: /tmp
+          name: empty-dir
+          subPath: tmp-dir
+        - mountPath: /opt/app/policy/clamp/etc/logback.xml
+          name: ac-pf-ppnt-config-processed
+          subPath: logback.xml
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - cd /config-input && for PFILE in `ls -1`; do envsubst <${PFILE} >/config/${PFILE};
+          done
+        command:
+        - sh
+        env:
+        - name: API_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-api-user-creds
+        - name: API_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-api-user-creds
+        - name: PAP_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-pap-user-creds
+        - name: PAP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-pap-user-creds
+        - name: RESTSERVER_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-clamp-ac-pf-ppnt-restserver-secret
+        - name: RESTSERVER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-clamp-ac-pf-ppnt-restserver-secret
+        - name: SASL_JAAS_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: sasl.jaas.config
+              name: policy-clamp-ac-pf-ppnt-ku
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-clamp-ac-pf-ppnt-update-config
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input
+          name: ac-pf-ppnt-config
+        - mountPath: /config
+          name: ac-pf-ppnt-config-processed
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 102
+        runAsGroup: 102
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-policy-clamp-ac-pf-ppnt-read
+      serviceAccountName: onap-policy-clamp-ac-pf-ppnt-read
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 493
+          name: onap-policy-clamp-ac-pf-ppnt-configmap
+        name: ac-pf-ppnt-config
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 64Mi
+        name: ac-pf-ppnt-config-processed
+      - emptyDir:
+          sizeLimit: 1Gi
+        name: empty-dir
+      - emptyDir:
+          sizeLimit: 500Mi
+        name: logs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-clamp-runtime-acm
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-runtime-acm
+    helm.sh/chart: policy-clamp-runtime-acm-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-runtime-acm
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: onap
+      app.kubernetes.io/name: policy-clamp-runtime-acm
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-clamp-runtime-acm
+        app.kubernetes.io/instance: onap
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: policy-clamp-runtime-acm
+        helm.sh/chart: policy-clamp-runtime-acm-17.0.0
+        version: 17.0.0
+      name: policy-clamp-runtime-acm
+    spec:
+      containers:
+      - args:
+        - /opt/app/policy/clamp/etc/mounted/acRuntimeParameters.yaml
+        command:
+        - /opt/app/policy/clamp/bin/acm-runtime.sh
+        image: nexus3.onap.org:10001/onap/policy-clamp-runtime-acm:8.2.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-api
+          timeoutSeconds: 1
+        name: policy-clamp-runtime-acm
+        ports:
+        - containerPort: 6969
+          name: http-api
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-api
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/localtime
+          name: localtime
+          readOnly: true
+        - mountPath: /var/log/onap
+          name: logs
+        - mountPath: /tmp
+          name: empty-dir
+          subPath: tmp-dir
+        - mountPath: /opt/app/policy/clamp/etc/logback.xml
+          name: ac-runtime-config-processed
+          subPath: logback.xml
+        - mountPath: /opt/app/policy/clamp/etc/mounted
+          name: ac-runtime-config-processed
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - --service-name
+        - policy-api
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: nexus3.onap.org:10001/onap/oom/readiness:7.0.1
+        imagePullPolicy: IfNotPresent
+        name: policy-clamp-runtime-acm-readiness
+        resources:
+          limits:
+            cpu: 100m
+            memory: 500Mi
+          requests:
+            cpu: 3m
+            memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 65533
+          runAsUser: 100
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      - args:
+        - -c
+        - cd /config-input && for PFILE in `ls -1`; do envsubst <${PFILE} >/config/${PFILE};
+          done
+        command:
+        - sh
+        env:
+        - name: SQL_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: SQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: RUNTIME_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-app-user-creds
+        - name: RUNTIME_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-app-user-creds
+        - name: SASL_JAAS_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: sasl.jaas.config
+              name: policy-clamp-runtime-acm-ku
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-clamp-runtime-acm-update-config
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input
+          name: ac-runtime-config
+        - mountPath: /config
+          name: ac-runtime-config-processed
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 102
+        runAsGroup: 102
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-policy-clamp-runtime-acm-read
+      serviceAccountName: onap-policy-clamp-runtime-acm-read
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /etc/localtime
+          type: ''
+        name: localtime
+      - emptyDir:
+          sizeLimit: 1Gi
+        name: empty-dir
+      - emptyDir:
+          sizeLimit: 500Mi
+        name: logs
+      - configMap:
+          defaultMode: 493
+          name: onap-policy-clamp-runtime-acm-configmap
+        name: ac-runtime-config
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 64Mi
+        name: ac-runtime-config-processed
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-pap
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-pap
+    helm.sh/chart: policy-pap-17.0.0
+    version: 17.0.0
+  name: onap-policy-pap
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: onap
+      app.kubernetes.io/name: policy-pap
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-pap
+        app.kubernetes.io/instance: onap
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: policy-pap
+        helm.sh/chart: policy-pap-17.0.0
+        version: 17.0.0
+      name: policy-pap
+    spec:
+      containers:
+      - args:
+        - cat /opt/app/policy/pap/etc/mounted/papParameters.yaml; /opt/app/policy/pap/bin/policy-pap.sh
+          /opt/app/policy/pap/etc/mounted/papParameters.yaml
+        command:
+        - /bin/sh
+        - -cx
+        image: nexus3.onap.org:10001/onap/policy-pap:4.2.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: http-api
+          timeoutSeconds: 1
+        name: policy-pap
+        ports:
+        - containerPort: 6969
+          name: http-api
+          protocol: TCP
+        - containerPort: 5005
+          name: debug-port
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            httpHeaders:
+            - name: Authorization
+              value: Basic cG9saWN5YWRtaW46emIhWHp0RzM0
+            path: /policy/pap/v1/healthcheck
+            port: http-api
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 120
+          successThreshold: 1
+          timeoutSeconds: 60
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/localtime
+          name: localtime
+          readOnly: true
+        - mountPath: /var/log/onap
+          name: logs
+        - mountPath: /tmp
+          name: empty-dir
+          subPath: tmp-dir
+        - mountPath: /opt/app/policy/pap/etc/logback.xml
+          name: papconfig-processed
+          subPath: logback.xml
+        - mountPath: /opt/app/policy/pap/etc/mounted
+          name: papconfig-processed
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - --service-name
+        - policy-api
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: nexus3.onap.org:10001/onap/oom/readiness:7.0.1
+        imagePullPolicy: IfNotPresent
+        name: policy-pap-readiness
+        resources:
+          limits:
+            cpu: 100m
+            memory: 500Mi
+          requests:
+            cpu: 3m
+            memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 65533
+          runAsUser: 100
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      - args:
+        - -c
+        - cd /config-input && for PFILE in `ls -1`; do envsubst <${PFILE} >/config/${PFILE};
+          done
+        command:
+        - sh
+        env:
+        - name: SQL_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: SQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: RESTSERVER_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-pap-user-creds
+        - name: RESTSERVER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-pap-user-creds
+        - name: API_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-api-user-creds
+        - name: API_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-api-user-creds
+        - name: DISTRIBUTION_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-pap-distribution-secret
+        - name: DISTRIBUTION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-pap-distribution-secret
+        - name: JAASLOGIN
+          valueFrom:
+            secretKeyRef:
+              key: sasl.jaas.config
+              name: policy-pap-ku
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-pap-update-config
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input
+          name: papconfig
+        - mountPath: /config
+          name: papconfig-processed
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 102
+        runAsGroup: 102
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-policy-pap-read
+      serviceAccountName: onap-policy-pap-read
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir:
+          sizeLimit: 1Gi
+        name: localtime
+      - emptyDir:
+          sizeLimit: 1Gi
+        name: empty-dir
+      - emptyDir:
+          sizeLimit: 500Mi
+        name: logs
+      - configMap:
+          defaultMode: 493
+          name: onap-policy-pap-configmap
+        name: papconfig
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 64Mi
+        name: papconfig-processed
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-postgres-primary
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/name: policy-postgres-primary
+    chart: postgres-13.1.0
+    heritage: Helm
+    name: policy-pg-primary
+    release: onap
+    version: 13.1.0
+  name: onap-policy-postgres-primary
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: policy-postgres-primary
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-postgres-primary
+        app.kubernetes.io/name: policy-postgres-primary
+        name: policy-pg-primary
+        release: onap
+        version: 13.1.0
+    spec:
+      containers:
+      - env:
+        - name: PGHOST
+          value: /tmp
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_MODE
+          value: primary
+        - name: PG_PRIMARY_HOST
+          value: policy-pg-primary
+        - name: PG_REPLICA_HOST
+          value: policy-pg-replica
+        - name: PG_PRIMARY_PORT
+          value: '5432'
+        - name: PG_PRIMARY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: PG_DATABASE
+          value: policyadmin
+        - name: PG_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-root-password
+        - name: PGDATA_PATH_OVERRIDE
+          value: data
+        image: nexus3.onap.org:10001/crunchydata/crunchy-postgres:centos8-13.2-4.6.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 300
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 5
+        name: policy-postgres
+        ports:
+        - containerPort: 5432
+          name: tcp-postgres
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /pgconf/pool_hba.conf
+          name: config
+          subPath: pool_hba.conf
+        - mountPath: /pgconf/setup.sql
+          name: pgconf
+          subPath: setup.sql
+        - mountPath: /pgdata
+          name: onap-policy-postgres-data
+        - mountPath: /backup
+          name: onap-policy-postgres-backup
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - "function prepare_password {\n  echo -n $1 | sed -e \"s/'/''/g\"\n}\nexport\
+          \ PG_PRIMARY_PASSWORD=`prepare_password $PG_PRIMARY_PASSWORD_INPUT`;\nexport\
+          \ PG_PASSWORD=`prepare_password $PG_PASSWORD_INPUT`;\nexport PG_ROOT_PASSWORD=`prepare_password\
+          \ $PG_ROOT_PASSWORD_INPUT`;\ncd /config-input && for PFILE in `ls -1 .`;\
+          \ do envsubst <${PFILE} >/config/${PFILE}; done\n"
+        command:
+        - sh
+        env:
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_PRIMARY_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: PG_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: PG_DATABASE
+          value: policyadmin
+        - name: PG_ROOT_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-root-password
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-postgres-update-config
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input/setup.sql
+          name: config
+          subPath: setup.sql
+        - mountPath: /config
+          name: pgconf
+      - command:
+        - /bin/sh
+        - -c
+        - 'chown 26:26 /podroot/;
+
+          chmod 700 /podroot/;
+
+          '
+        image: nexus3.onap.org:10001/busybox:1.37.0
+        imagePullPolicy: IfNotPresent
+        name: init-sysctl
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /podroot/
+          name: onap-policy-postgres-data
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: onap-policy-postgres-backup
+      - name: onap-policy-postgres-data
+        persistentVolumeClaim:
+          claimName: onap-policy-postgres-primary
+      - configMap:
+          defaultMode: 420
+          name: onap-policy-postgres
+        name: config
+      - emptyDir:
+          medium: Memory
+        name: pgconf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-postgres-replica
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/name: policy-postgres-replica
+    chart: postgres-13.1.0
+    heritage: Helm
+    name: policy-pg-replica
+    release: onap
+    version: 13.1.0
+  name: onap-policy-postgres-replica
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: policy-postgres-replica
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-postgres-replica
+        app.kubernetes.io/name: policy-postgres-replica
+        name: policy-pg-replica
+        release: onap
+        version: 13.1.0
+    spec:
+      containers:
+      - env:
+        - name: PGHOST
+          value: /tmp
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_MODE
+          value: replica
+        - name: PG_PRIMARY_HOST
+          value: policy-pg-primary
+        - name: PG_REPLICA_HOST
+          value: policy-pg-replica
+        - name: PG_PRIMARY_PORT
+          value: '5432'
+        - name: PG_PRIMARY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: PG_DATABASE
+          value: policyadmin
+        - name: PG_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-root-password
+        - name: PGDATA_PATH_OVERRIDE
+          value: data
+        image: nexus3.onap.org:10001/crunchydata/crunchy-postgres:centos8-13.2-4.6.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 300
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 5
+        name: policy-postgres
+        ports:
+        - containerPort: 5432
+          name: tcp-postgres
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /pgconf/pool_hba.conf
+          name: config
+          subPath: pool_hba.conf
+        - mountPath: /pgconf/setup.sql
+          name: pgconf
+          subPath: setup.sql
+        - mountPath: /pgdata
+          name: onap-policy-postgres-data
+        - mountPath: /backup
+          name: onap-policy-postgres-backup
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - "function prepare_password {\n  echo -n $1 | sed -e \"s/'/''/g\"\n}\nexport\
+          \ PG_PRIMARY_PASSWORD=`prepare_password $PG_PRIMARY_PASSWORD_INPUT`;\nexport\
+          \ PG_PASSWORD=`prepare_password $PG_PASSWORD_INPUT`;\nexport PG_ROOT_PASSWORD=`prepare_password\
+          \ $PG_ROOT_PASSWORD_INPUT`;\ncd /config-input && for PFILE in `ls -1 .`;\
+          \ do envsubst <${PFILE} >/config/${PFILE}; done\n"
+        command:
+        - sh
+        env:
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_PRIMARY_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: PG_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: PG_DATABASE
+          value: policyadmin
+        - name: PG_ROOT_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-root-password
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-postgres-update-config
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input/setup.sql
+          name: config
+          subPath: setup.sql
+        - mountPath: /config
+          name: pgconf
+      - command:
+        - /bin/sh
+        - -c
+        - 'chown 26:26 /podroot/;
+
+          chmod 700 /podroot/;
+
+          '
+        image: nexus3.onap.org:10001/busybox:1.37.0
+        imagePullPolicy: IfNotPresent
+        name: init-sysctl
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /podroot/
+          name: onap-policy-postgres-data
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: onap-policy-postgres-backup
+      - name: onap-policy-postgres-data
+        persistentVolumeClaim:
+          claimName: onap-policy-postgres-replica
+      - configMap:
+          defaultMode: 420
+          name: onap-policy-postgres
+        name: config
+      - emptyDir:
+          medium: Memory
+        name: pgconf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-apex-pdp
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-apex-pdp
+    helm.sh/chart: policy-apex-pdp-17.0.0
+    version: 17.0.0
+  name: policy-apex-pdp
+  namespace: onap
+spec:
+  clusterIP: 10.101.6.45
+  clusterIPs:
+  - 10.101.6.45
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: PreferDualStack
+  ports:
+  - name: http
+    port: 6969
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/instance: onap
+    app.kubernetes.io/name: policy-apex-pdp
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-api
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-api
+    helm.sh/chart: policy-api-17.0.0
+    version: 17.0.0
+  name: policy-api
+  namespace: onap
+spec:
+  clusterIP: 10.101.41.120
+  clusterIPs:
+  - 10.101.41.120
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: PreferDualStack
+  ports:
+  - name: http
+    port: 6969
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/instance: onap
+    app.kubernetes.io/name: policy-api
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-clamp-ac-a1pms-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-a1pms-ppnt
+    helm.sh/chart: policy-clamp-ac-a1pms-ppnt-17.0.0
+    version: 17.0.0
+  name: policy-clamp-ac-a1pms-ppnt
+  namespace: onap
+spec:
+  clusterIP: 10.100.12.167
+  clusterIPs:
+  - 10.100.12.167
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: PreferDualStack
+  ports:
+  - name: http-a1pms-api
+    port: 8086
+    protocol: TCP
+    targetPort: http-a1pms-api
+  selector:
+    app.kubernetes.io/instance: onap
+    app.kubernetes.io/name: policy-clamp-ac-a1pms-ppnt
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-clamp-ac-http-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-http-ppnt
+    helm.sh/chart: policy-clamp-ac-http-ppnt-17.0.0
+    version: 17.0.0
+  name: policy-clamp-ac-http-ppnt
+  namespace: onap
+spec:
+  clusterIP: 10.103.209.214
+  clusterIPs:
+  - 10.103.209.214
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: PreferDualStack
+  ports:
+  - name: http-api
+    port: 8084
+    protocol: TCP
+    targetPort: http-api
+  selector:
+    app.kubernetes.io/instance: onap
+    app.kubernetes.io/name: policy-clamp-ac-http-ppnt
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-clamp-ac-pf-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-pf-ppnt
+    helm.sh/chart: policy-clamp-ac-pf-ppnt-17.0.0
+    version: 17.0.0
+  name: policy-clamp-ac-pf-ppnt
+  namespace: onap
+spec:
+  clusterIP: 10.101.68.24
+  clusterIPs:
+  - 10.101.68.24
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: PreferDualStack
+  ports:
+  - name: http-api
+    port: 8085
+    protocol: TCP
+    targetPort: http-api
+  selector:
+    app.kubernetes.io/instance: onap
+    app.kubernetes.io/name: policy-clamp-ac-pf-ppnt
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-clamp-runtime-acm
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-runtime-acm
+    helm.sh/chart: policy-clamp-runtime-acm-17.0.0
+    version: 17.0.0
+  name: policy-clamp-runtime-acm
+  namespace: onap
+spec:
+  clusterIP: 10.101.99.21
+  clusterIPs:
+  - 10.101.99.21
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: PreferDualStack
+  ports:
+  - name: http-api
+    port: 6969
+    protocol: TCP
+    targetPort: http-api
+  selector:
+    app.kubernetes.io/instance: onap
+    app.kubernetes.io/name: policy-clamp-runtime-acm
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-pap
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-pap
+    helm.sh/chart: policy-pap-17.0.0
+    version: 17.0.0
+  name: policy-pap
+  namespace: onap
+spec:
+  clusterIP: 10.107.161.105
+  clusterIPs:
+  - 10.107.161.105
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: PreferDualStack
+  ports:
+  - name: http-api
+    port: 6969
+    protocol: TCP
+    targetPort: http-api
+  - name: debug-port
+    port: 5005
+    protocol: TCP
+    targetPort: debug-port
+  selector:
+    app.kubernetes.io/instance: onap
+    app.kubernetes.io/name: policy-pap
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-postgres-primary
+    app.kubernetes.io/instance: onap-policy
+    chart: postgres-13.1.0
+    heritage: Helm
+    release: onap
+  name: policy-pg-primary
+  namespace: onap
+spec:
+  clusterIP: 10.103.98.143
+  clusterIPs:
+  - 10.103.98.143
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: tcp-postgres
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    name: policy-pg-primary
+    release: onap
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-postgres-replica
+    app.kubernetes.io/instance: onap-policy
+    chart: postgres-13.1.0
+    heritage: Helm
+    release: onap
+  name: policy-pg-replica
+  namespace: onap
+spec:
+  clusterIP: 10.109.95.81
+  clusterIPs:
+  - 10.109.95.81
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: tcp-postgres
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    name: policy-pg-replica
+    release: onap
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-postgres
+    app.kubernetes.io/instance: onap-policy
+    chart: postgres-13.1.0
+    heritage: Helm
+    release: onap
+  name: policy-postgres
+  namespace: onap
+spec:
+  clusterIP: 10.96.214.54
+  clusterIPs:
+  - 10.96.214.54
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: tcp-postgres
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: policy-postgres
+    release: onap
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+data:
+  OnapPfConfig.json: "{\n    \"name\":\"OnapPfParameterGroup\",\n    \"restServerParameters\"\
+    : {\n      \"host\": \"0.0.0.0\",\n      \"port\": 6969,\n      \"userName\":\
+    \ \"${RESTSERVER_USER}\",\n      \"password\": \"${RESTSERVER_PASSWORD}\",\n \
+    \     \"https\": \"false\",\n      \"prometheus\": true\n    },\n    \"pdpStatusParameters\"\
+    : {\n        \"pdpGroup\": \"defaultGroup\",\n        \"timeIntervalMs\": 120000,\n\
+    \        \"pdpType\":\"apex\",\n        \"description\":\"Pdp Heartbeat\",\n \
+    \       \"supportedPolicyTypes\": [\n            {\n                \"name\":\
+    \ \"onap.policies.native.Apex\",\n                \"version\": \"1.0.0\"\n   \
+    \         },\n            {\n              \"name\": \"onap.policies.controlloop.operational.common.Apex\"\
+    ,\n              \"version\": \"1.0.0\"\n            }\n        ]\n    },\n  \
+    \  \"topicParameterGroup\": {\n      \"topicSources\": [{\n          \"topic\"\
+    : \"${PAP_TOPIC}\",\n          \"useHttps\": false,\n          \"fetchTimeout\"\
+    : 15000,\n          \"servers\": [ \"${KAFKA_URL}\" ],\n          \"topicCommInfrastructure\"\
+    : \"kafka\",\n          \"additionalProps\": {\n            \"group.id\" : \"\
+    ${GROUP_ID}\",\n            \"security.protocol\": \"SASL_PLAINTEXT\",\n     \
+    \       \"sasl.mechanism\": \"${SASL}\",\n            \"sasl.jaas.config\": \"\
+    ${JAASLOGIN}\"\n        }}],\n      \"topicSinks\" : [{\n          \"topic\":\
+    \ \"${PAP_TOPIC}\",\n          \"useHttps\": false,\n          \"servers\": [\
+    \ \"${KAFKA_URL}\" ],\n          \"topicCommInfrastructure\": \"kafka\",\n   \
+    \       \"additionalProps\": {\n            \"group.id\" : \"${GROUP_ID}\",\n\
+    \            \"security.protocol\": \"SASL_PLAINTEXT\",\n            \"sasl.mechanism\"\
+    : \"${SASL}\",\n            \"sasl.jaas.config\": \"${JAASLOGIN}\"\n         \
+    \ }\n      }]\n    }\n}\n"
+  logback.xml: "<!--\n  ============LICENSE_START=======================================================\n\
+    \   Copyright (C) 2020 Bell Canada. All rights reserved.\n   Modifications Copyright\
+    \ (C) 2021 AT&T Intellectual Property. All rights reserved.\n  ================================================================================\n\
+    \  Licensed under the Apache License, Version 2.0 (the \"License\");\n  you may\
+    \ not use this file except in compliance with the License.\n  You may obtain a\
+    \ copy of the License at\n       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \  Unless required by applicable law or agreed to in writing, software\n  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n  See the License for\
+    \ the specific language governing permissions and\n  limitations under the License.\n\
+    \  SPDX-License-Identifier: Apache-2.0\n  ============LICENSE_END=========================================================\n\
+    -->\n\n<configuration scan=\"true\" scanPeriod=\"30 seconds\" debug=\"false\"\
+    >\n\n    <appender name=\"ErrorOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/apex-pdp/error.log</file>\n        <rollingPolicy\
+    \ class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\">\n     \
+    \       <fileNamePattern>/var/log/onap/policy/apex-pdp/error.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <filter class=\"ch.qos.logback.classic.filter.ThresholdFilter\"\
+    >\n            <level>WARN</level>\n        </filter>\n        <encoder>\n   \
+    \         <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncErrorOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"ErrorOut\" />\n    </appender>\n\n    <appender name=\"DebugOut\" class=\"\
+    ch.qos.logback.core.rolling.RollingFileAppender\">\n        <file>/var/log/onap/policy/apex-pdp/debug.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/apex-pdp/debug.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%level|%logger{0}|%thread] %msg%n</pattern>\n        </encoder>\n    </appender>\n\
+    \n    <appender name=\"AsyncDebugOut\" class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"DebugOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"NetworkOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/apex-pdp/network.log</file>\n        <rollingPolicy\
+    \ class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\">\n     \
+    \       <fileNamePattern>/var/log/onap/policy/apex-pdp/network.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%t]%m%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender\
+    \ name=\"AsyncNetworkOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n \
+    \       <appender-ref ref=\"NetworkOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n        <encoder>\n\
+    \            <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</Pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncStdOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"STDOUT\" />\n    </appender>\n\n    <logger name=\"network\" level=\"\
+    INFO\" additivity=\"false\">\n        <appender-ref ref=\"AsyncNetworkOut\" />\n\
+    \        <appender-ref ref=\"AsyncStdOut\" />\n    </logger>\n\n    <logger name=\"\
+    org.eclipse.jetty.server.RequestLog\" level=\"info\" additivity=\"false\">\n \
+    \       <appender-ref ref=\"AsyncNetworkOut\" />\n        <appender-ref ref=\"\
+    AsyncStdOut\" />\n    </logger>\n\n    <root level=\"INFO\">\n        <appender-ref\
+    \ ref=\"AsyncDebugOut\" />\n        <appender-ref ref=\"AsyncErrorOut\" />\n \
+    \       <appender-ref ref=\"AsyncStdOut\" />\n    </root>\n\n</configuration>\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-apex-pdp
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-apex-pdp
+    helm.sh/chart: policy-apex-pdp-17.0.0
+    version: 17.0.0
+  name: onap-policy-apex-pdp-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  apiParameters.yaml: "#  ============LICENSE_START=======================================================\n\
+    #   Copyright (C) 2022 Bell Canada. All rights reserved.\n#   Modifications Copyright\
+    \ (C) 2022 AT&T Intellectual Property.\n#   Modification (C) 2023,2025 Deutsche\
+    \ Telekom. All rights reserved.\n#   Modifications Copyright \xA9 2024-2025 Nordix\
+    \ Foundation.\n#  ================================================================================\n\
+    #  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may\
+    \ not use this file except in compliance with the License.\n#  You may obtain\
+    \ a copy of the License at\n#\n#       http://www.apache.org/licenses/LICENSE-2.0\n\
+    #\n#  Unless required by applicable law or agreed to in writing, software\n# \
+    \ distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT\
+    \ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the\
+    \ License for the specific language governing permissions and\n#  limitations\
+    \ under the License.\n#\n#  SPDX-License-Identifier: Apache-2.0\n#  ============LICENSE_END=========================================================\n\
+    \nserver:\n  port: 6969\n  ssl:\n    enabled: false\n  servlet:\n    context-path:\
+    \ /policy/api/v1\n\nspring:\n  security.user:\n    name: \"${RESTSERVER_USER}\"\
+    \n    password: \"${RESTSERVER_PASSWORD}\"\n  mvc.converters.preferred-json-mapper:\
+    \ gson\n  datasource:\n    url: jdbc:postgresql://policy-pg-primary:5432/policyadmin\n\
+    \    driverClassName: org.postgresql.Driver\n    username: \"${SQL_USER}\"\n \
+    \   password: \"${SQL_PASSWORD}\"\n    hikari:\n      connectionTimeout: 30000\n\
+    \      idleTimeout: 600000\n      maxLifetime: 1800000\n      maximumPoolSize:\
+    \ 10\n  jpa:\n    hibernate:\n      ddl-auto: none\n      naming:\n        physical-strategy:\
+    \ org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl\n       \
+    \ implicit-strategy: org.onap.policy.common.spring.utils.CustomImplicitNamingStrategy\n\
+    \npolicy-api:\n  name: ApiGroup\n  aaf: false\n\npolicy-preload:\n  policyTypes:\n\
+    \    - policytypes/onap.policies.monitoring.tcagen2.yaml\n    - policytypes/onap.policies.monitoring.tcagen2.v2.yaml\n\
+    \    - policytypes/onap.policies.monitoring.dcaegen2.collectors.datafile.datafile-app-server.yaml\n\
+    \    - policytypes/onap.policies.monitoring.dcae-restconfcollector.yaml\n    -\
+    \ policytypes/onap.policies.monitoring.dcae-pm-subscription-handler.yaml\n   \
+    \ - policytypes/onap.policies.monitoring.dcae-pm-mapper.yaml\n    - policytypes/onap.policies.Optimization.yaml\n\
+    \    - policytypes/onap.policies.optimization.Resource.yaml\n    - policytypes/onap.policies.optimization.Service.yaml\n\
+    \    - policytypes/onap.policies.optimization.resource.AffinityPolicy.yaml\n \
+    \   - policytypes/onap.policies.optimization.resource.DistancePolicy.yaml\n  \
+    \  - policytypes/onap.policies.optimization.resource.HpaPolicy.yaml\n    - policytypes/onap.policies.optimization.resource.OptimizationPolicy.yaml\n\
+    \    - policytypes/onap.policies.optimization.resource.PciPolicy.yaml\n    - policytypes/onap.policies.optimization.service.QueryPolicy.yaml\n\
+    \    - policytypes/onap.policies.optimization.service.SubscriberPolicy.yaml\n\
+    \    - policytypes/onap.policies.optimization.resource.Vim_fit.yaml\n    - policytypes/onap.policies.optimization.resource.VnfPolicy.yaml\n\
+    \    - policytypes/onap.policies.controlloop.guard.Common.yaml\n    - policytypes/onap.policies.controlloop.guard.common.Blacklist.yaml\n\
+    \    - policytypes/onap.policies.controlloop.guard.common.FrequencyLimiter.yaml\n\
+    \    - policytypes/onap.policies.controlloop.guard.common.MinMax.yaml\n    - policytypes/onap.policies.controlloop.guard.common.Filter.yaml\n\
+    \    - policytypes/onap.policies.controlloop.guard.coordination.FirstBlocksSecond.yaml\n\
+    \    - policytypes/onap.policies.Naming.yaml\n    - policytypes/onap.policies.Match.yaml\n\
+    \    - policytypes/onap.policies.native.Drools.yaml\n    - policytypes/onap.policies.native.Xacml.yaml\n\
+    \    - policytypes/onap.policies.native.ToscaXacml.yaml\n    - policytypes/onap.policies.native.Apex.yaml\n\
+    \    - policytypes/onap.policies.controlloop.operational.Common.yaml\n    - policytypes/onap.policies.controlloop.operational.common.Apex.yaml\n\
+    \    - policytypes/onap.policies.controlloop.operational.common.Drools.yaml\n\
+    \    - policytypes/onap.policies.native.opa.yaml\n  policies:\n    - policies/sdnc.policy.naming.input.tosca.yaml\n\
+    \    - policies/opa.policy.slice.capacity.check.tosca.yaml\n\nmanagement:\n  endpoints:\n\
+    \    web:\n      base-path: /\n      exposure:\n        include: health,metrics,prometheus\n\
+    \      path-mapping.prometheus: metrics\n"
+  logback.xml: "<!--\n  ============LICENSE_START=======================================================\n\
+    \   Copyright (C) 2020 Bell Canada. All rights reserved.\n   Modifications Copyright\
+    \ (C) 2021 AT&T Intellectual Property. All rights reserved.\n  ================================================================================\n\
+    \  Licensed under the Apache License, Version 2.0 (the \"License\");\n  you may\
+    \ not use this file except in compliance with the License.\n  You may obtain a\
+    \ copy of the License at\n       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \  Unless required by applicable law or agreed to in writing, software\n  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n  See the License for\
+    \ the specific language governing permissions and\n  limitations under the License.\n\
+    \  SPDX-License-Identifier: Apache-2.0\n  ============LICENSE_END=========================================================\n\
+    -->\n\n<configuration scan=\"true\" scanPeriod=\"30 seconds\" debug=\"false\"\
+    >\n\n    <appender name=\"ErrorOut\"\n        class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/api/error.log</file>\n        <rollingPolicy\n\
+    \            class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/api/error.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <filter class=\"ch.qos.logback.classic.filter.ThresholdFilter\"\
+    >\n            <level>WARN</level>\n        </filter>\n        <encoder>\n   \
+    \         <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncErrorOut\"\n        class=\"ch.qos.logback.classic.AsyncAppender\">\n   \
+    \     <appender-ref ref=\"ErrorOut\" />\n    </appender>\n\n    <appender name=\"\
+    DebugOut\"\n        class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/api/debug.log</file>\n        <rollingPolicy\n\
+    \            class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/api/debug.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%level|%logger{0}|%thread] %msg%n</pattern>\n        </encoder>\n    </appender>\n\
+    \n    <appender name=\"AsyncDebugOut\"\n        class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"DebugOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"NetworkOut\"\n        class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/api/network.log</file>\n        <rollingPolicy\n\
+    \            class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/api/network.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%t]%m%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender\
+    \ name=\"AsyncNetworkOut\"\n        class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"NetworkOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"MetricOut\"\n        class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/api/metric.log</file>\n        <rollingPolicy\n\
+    \            class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/api/metric.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>%X{RequestID}|%X{InvocationID}|%X{ServiceName}|%X{PartnerName}|%X{BeginTimestamp}|%X{EndTimestamp}|%X{ElapsedTime}|%X{ServiceInstanceID}|%X{VirtualServerName}|%X{StatusCode}|%X{ResponseCode}|%X{ResponseDescription}|%X{InstanceUUID}|%X{Severity}|%X{TargetEntity}|%X{TargetServiceName}|%X{Server}|%X{ServerIPAddress}|%X{ServerFQDN}|%X{ClientIPAddress}|%X{ProcessKey}|%X{RemoteHost}|%X{AlertSeverity}|%X{TargetVirtualEntity}|%level|%thread|\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncMetricOut\"\n        class=\"ch.qos.logback.classic.AsyncAppender\">\n  \
+    \      <appender-ref ref=\"MetricOut\" />\n    </appender>\n\n    <appender name=\"\
+    TransactionOut\"\n        class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/api/audit.log</file>\n        <rollingPolicy\n\
+    \            class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/api/audit.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>%X{RequestID}|%X{InvocationID}|%X{ServiceName}|%X{PartnerName}|%X{BeginTimestamp}|%X{EndTimestamp}|%X{ElapsedTime}|%X{ServiceInstanceID}|%X{VirtualServerName}|%X{StatusCode}|%X{ResponseCode}|%X{ResponseDescription}|%X{InstanceUUID}|%X{Severity}|%X{TargetEntity}|%X{TargetServiceName}|%X{Server}|%X{ServerIPAddress}|%X{ServerFQDN}|%X{ClientIPAddress}|%X{ProcessKey}|%X{RemoteHost}|%X{AlertSeverity}|%X{TargetVirtualEntity}|%level|%thread|\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncTransactionOut\"\n        class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"TransactionOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n        <encoder>\n\
+    \            <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</Pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncStdOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"STDOUT\" />\n    </appender>\n\n    <logger name=\"network\" level=\"\
+    INFO\" additivity=\"false\">\n        <appender-ref ref=\"AsyncNetworkOut\" />\n\
+    \        <appender-ref ref=\"AsyncStdOut\" />\n    </logger>\n\n    <logger name=\"\
+    org.eclipse.jetty.server.RequestLog\" level=\"info\"\n        additivity=\"false\"\
+    >\n        <appender-ref ref=\"AsyncNetworkOut\" />\n        <appender-ref ref=\"\
+    AsyncStdOut\" />\n    </logger>\n\n    <logger name=\"org.eclipse.jetty\" level=\"\
+    ERROR\" />\n\n    <root level=\"INFO\">\n        <appender-ref ref=\"AsyncDebugOut\"\
+    \ />\n        <appender-ref ref=\"AsyncErrorOut\" />\n        <appender-ref ref=\"\
+    AsyncMetricOut\" />\n        <appender-ref ref=\"AsyncTransactionOut\" />\n  \
+    \      <appender-ref ref=\"AsyncStdOut\" />\n    </root>\n\n</configuration>\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-api
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-api
+    helm.sh/chart: policy-api-17.0.0
+    version: 17.0.0
+  name: onap-policy-api-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  db-pg.sh: "#!/bin/sh\n#\n# ============LICENSE_START=======================================================\n\
+    # Copyright (C) 2021-2024 Nordix Foundation.\n# ================================================================================\n\
+    # Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may\
+    \ not use this file except in compliance with the License.\n# You may obtain a\
+    \ copy of the License at\n#    http://www.apache.org/licenses/LICENSE-2.0\n# Unless\
+    \ required by applicable law or agreed to in writing, software\n# distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n# See the License for\
+    \ the specific language governing permissions and\n# limitations under the License.\n\
+    # SPDX-License-Identifier: Apache-2.0\n# ============LICENSE_END=========================================================\n\
+    #\n\n#psql() { /usr/bin/psql  -h ${PG_HOST} -p ${PG_PORT} \"$@\"; };\n\nexport\
+    \ PGPASSWORD=${PG_ADMIN_PASSWORD};\n\necho \"Create user ${PG_USER} is created\
+    \ in Host ${PG_HOST}\"\npsql -h ${PG_HOST} -p ${PG_PORT} -U postgres --command\
+    \ \"CREATE USER \\\"${PG_USER}\\\" WITH PASSWORD '${PG_USER_PASSWORD}'\"\n\nfor\
+    \ db in migration pooling policyadmin policyclamp operationshistory clampacm\n\
+    do\n    echo \"Create DB ${db}\"\n    psql -h ${PG_HOST} -p ${PG_PORT} -U postgres\
+    \ --command \"CREATE DATABASE ${db};\"\n    echo \"Grant privileges to DB ${db}\
+    \ for user ${PG_USER}\"\n    psql -h ${PG_HOST} -p ${PG_PORT} -U postgres --command\
+    \ \"GRANT ALL PRIVILEGES ON DATABASE ${db} TO \\\"${PG_USER}\\\";\"\n    echo\
+    \ \"Grant privileges to SCHEMA public for user ${PG_USER}\"\n    psql -h ${PG_HOST}\
+    \ -p ${PG_PORT} -d ${db} -U postgres --command \"GRANT ALL ON SCHEMA public TO\
+    \ \\\"${PG_USER}\\\";\"\ndone\n"
+  db_migrator_pg_policy_init.sh: "#!/bin/sh\n\n\nfor schema in ${SQL_DB}; do\n   \
+    \ echo \"Initializing $schema...\"\n    /opt/app/policy/bin/prepare_upgrade.sh\
+    \ ${schema}\n\n    /opt/app/policy/bin/db-migrator-pg -s ${schema} -o report\n\
+    \n    /opt/app/policy/bin/db-migrator-pg -s ${schema} -o upgrade\n    rc=$?\n\n\
+    \    /opt/app/policy/bin/db-migrator-pg -s ${schema} -o report\n\n    if [ \"\
+    $rc\" != 0 ]; then\n        break\n    fi\ndone\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-api
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-api
+    helm.sh/chart: policy-api-17.0.0
+    version: 17.0.0
+  name: onap-policy-api-db-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  A1pmsParticipantParameters.yaml: "#  ============LICENSE_START=======================================================\n\
+    #  Copyright (C) 2022,2024 Nordix Foundation. All rights reserved.\n#  ================================================================================\n\
+    #  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may\
+    \ not use this file except in compliance with the License.\n#  You may obtain\
+    \ a copy of the License at\n#       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \n#  Unless required by applicable law or agreed to in writing, software\n#  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the License for\
+    \ the specific language governing permissions and\n#  limitations under the License.\n\
+    \n#  SPDX-License-Identifier: Apache-2.0\n#  ============LICENSE_END=========================================================\n\
+    \nspring:\n  autoconfigure:\n    exclude:\n      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration\n\
+    \      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration\n\
+    \      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration\n\
+    \      - org.springframework.boot.autoconfigure.data.web.SpringDataWebAutoConfiguration\n\
+    \  security:\n    user:\n      name: ${RESTSERVER_USER}\n      password: ${RESTSERVER_PASSWORD}\n\
+    \nsecurity:\n  enable-csrf: false\n\nparticipant:\n  intermediaryParameters:\n\
+    \    topics:\n      operationTopic: policy-acruntime-participant\n      syncTopic:\
+    \ acm-ppnt-sync\n    reportingTimeIntervalMs: 120000\n    description: Participant\
+    \ Description\n    participantId: 101c62b3-8918-41b9-a747-d21eb79c6c00\n    clampAutomationCompositionTopics:\n\
+    \      topicSources:\n        -\n          useHttps: false\n          fetchTimeout:\
+    \ 15000\n          topic: policy-acruntime-participant\n          topicCommInfrastructure:\
+    \ kafka\n          servers:\n            - onap-strimzi-kafka-bootstrap:9092\n\
+    \          additionalProps:\n            group.id: policy-clamp-ac-a1pms-ppnt\n\
+    \            allow.auto.create.topics: false\n            security.protocol: SASL_PLAINTEXT\n\
+    \            sasl.mechanism: SCRAM-SHA-512\n            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \        -\n          useHttps: false\n          fetchTimeout: 15000\n       \
+    \   topic: acm-ppnt-sync\n          topicCommInfrastructure: kafka\n         \
+    \ servers:\n            - onap-strimzi-kafka-bootstrap:9092\n          additionalProps:\n\
+    \            allow.auto.create.topics: false\n            security.protocol: SASL_PLAINTEXT\n\
+    \            sasl.mechanism: SCRAM-SHA-512\n            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \      topicSinks:\n        -\n          useHttps: false\n          fetchTimeout:\
+    \ 15000\n          topic: policy-acruntime-participant\n          topicCommInfrastructure:\
+    \ kafka\n          servers:\n            - onap-strimzi-kafka-bootstrap:9092\n\
+    \          additionalProps:\n            client.id: policy-clamp-ac-a1pms-ppnt-client-id\n\
+    \            security.protocol: SASL_PLAINTEXT\n            sasl.mechanism: SCRAM-SHA-512\n\
+    \            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n    participantSupportedElementTypes:\n\
+    \      -\n        typeName: org.onap.policy.clamp.acm.A1PMSAutomationCompositionElement\n\
+    \        typeVersion: 1.0.1\n\n\nmanagement:\n  endpoints:\n    web:\n      base-path:\
+    \ /\n      exposure:\n        include: health, metrics, prometheus\nserver:\n\
+    \  port: 8086\n  servlet:\n    context-path: /onap/policy/clamp/acm/a1pmsparticipant\n\
+    \  ssl:\n    enabled: false\na1pms:\n  baseUrl: http://policymanagementservice.nonrtric:8081\n\
+    \  endpoints:\n    health: /a1-policy/v2/rics\n    service: /a1-policy/v2/services/{service_id}\n\
+    \    services: /a1-policy/v2/services\n  headers:\n    content-type: application/json\n"
+  logback.xml: "<!--\n  ============LICENSE_START=======================================================\n\
+    \  Copyright (C) 2022 Nordix Foundation. All rights reserved.\n  ================================================================================\n\
+    \  Licensed under the Apache License, Version 2.0 (the \"License\");\n  you may\
+    \ not use this file except in compliance with the License.\n  You may obtain a\
+    \ copy of the License at\n       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \  Unless required by applicable law or agreed to in writing, software\n  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n  See the License for\
+    \ the specific language governing permissions and\n  limitations under the License.\n\
+    \  SPDX-License-Identifier: Apache-2.0\n  ============LICENSE_END=========================================================\n\
+    -->\n\n<configuration scan=\"true\" scanPeriod=\"30 seconds\" debug=\"false\"\
+    >\n\n    <appender name=\"ErrorOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/a1pms-participant/error.log</file>\n   \
+    \     <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/a1pms-participant/error.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <filter class=\"ch.qos.logback.classic.filter.ThresholdFilter\"\
+    >\n            <level>WARN</level>\n        </filter>\n        <encoder>\n   \
+    \         <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncErrorOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"ErrorOut\" />\n    </appender>\n\n    <appender name=\"DebugOut\" class=\"\
+    ch.qos.logback.core.rolling.RollingFileAppender\">\n        <file>/var/log/onap/policy/a1pms-participant/debug.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/a1pms-participant/debug.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%level|%logger{0}|%thread] %msg%n</pattern>\n        </encoder>\n    </appender>\n\
+    \n    <appender name=\"AsyncDebugOut\" class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"DebugOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"NetworkOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/a1pms-participant/network.log</file>\n \
+    \       <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/a1pms-participant/network.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%t]%m%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender\
+    \ name=\"AsyncNetworkOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n \
+    \       <appender-ref ref=\"NetworkOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n        <encoder>\n\
+    \            <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</Pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncStdOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"STDOUT\" />\n    </appender>\n\n    <logger name=\"network\" level=\"\
+    INFO\" additivity=\"false\">\n        <appender-ref ref=\"AsyncNetworkOut\" />\n\
+    \        <appender-ref ref=\"AsyncStdOut\" />\n    </logger>\n\n    <logger name=\"\
+    org.eclipse.jetty.server.RequestLog\" level=\"info\" additivity=\"false\">\n \
+    \       <appender-ref ref=\"AsyncNetworkOut\" />\n        <appender-ref ref=\"\
+    AsyncStdOut\" />\n    </logger>\n\n    <root level=\"INFO\">\n        <appender-ref\
+    \ ref=\"AsyncDebugOut\" />\n        <appender-ref ref=\"AsyncErrorOut\" />\n \
+    \       <appender-ref ref=\"AsyncStdOut\" />\n    </root>\n\n</configuration>\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-clamp-ac-a1pms-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-a1pms-ppnt
+    helm.sh/chart: policy-clamp-ac-a1pms-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-a1pms-ppnt-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  HttpParticipantParameters.yaml: "#  ============LICENSE_START=======================================================\n\
+    #   Copyright (C) 2021-2024 Nordix Foundation.\n#  ================================================================================\n\
+    #  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may\
+    \ not use this file except in compliance with the License.\n#  You may obtain\
+    \ a copy of the License at\n#\n#       http://www.apache.org/licenses/LICENSE-2.0\n\
+    #\n#  Unless required by applicable law or agreed to in writing, software\n# \
+    \ distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT\
+    \ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the\
+    \ License for the specific language governing permissions and\n#  limitations\
+    \ under the License.\n#\n#  SPDX-License-Identifier: Apache-2.0\n#  ============LICENSE_END=========================================================\n\
+    \nspring:\n  autoconfigure:\n    exclude: >\n      org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,\n\
+    \      org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,\n\
+    \      org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration\n\
+    \  security:\n    user:\n      name: ${RESTSERVER_USER}\n      password: ${RESTSERVER_PASSWORD}\n\
+    \nsecurity:\n  enable-csrf: false\n\nparticipant:\n  intermediaryParameters:\n\
+    \    topics:\n      operationTopic: policy-acruntime-participant\n      syncTopic:\
+    \ acm-ppnt-sync\n    reportingTimeIntervalMs: 120000\n    description: Participant\
+    \ Description\n    participantId: 101c62b3-8918-41b9-a747-d21eb79c6c01\n    clampAutomationCompositionTopics:\n\
+    \      topicSources:\n        -\n          useHttps: false\n          fetchTimeout:\
+    \ 15000\n          topic: policy-acruntime-participant\n          topicCommInfrastructure:\
+    \ kafka\n          servers:\n            - onap-strimzi-kafka-bootstrap:9092\n\
+    \          additionalProps:\n            group.id: policy-clamp-ac-http-ppnt\n\
+    \            allow.auto.create.topics: false\n            security.protocol: SASL_PLAINTEXT\n\
+    \            sasl.mechanism: SCRAM-SHA-512\n            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \        -\n          useHttps: false\n          fetchTimeout: 15000\n       \
+    \   topic: acm-ppnt-sync\n          topicCommInfrastructure: kafka\n         \
+    \ servers:\n            - onap-strimzi-kafka-bootstrap:9092\n          additionalProps:\n\
+    \            allow.auto.create.topics: false\n            security.protocol: SASL_PLAINTEXT\n\
+    \            sasl.mechanism: SCRAM-SHA-512\n            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \      topicSinks:\n        -\n          useHttps: false\n          fetchTimeout:\
+    \ 15000\n          topic: policy-acruntime-participant\n          topicCommInfrastructure:\
+    \ kafka\n          servers:\n            - onap-strimzi-kafka-bootstrap:9092\n\
+    \          additionalProps:\n            client.id: policy-clamp-ac-http-ppnt-client-id\n\
+    \            security.protocol: SASL_PLAINTEXT\n            sasl.mechanism: SCRAM-SHA-512\n\
+    \            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n    participantSupportedElementTypes:\n\
+    \      -\n        typeName: org.onap.policy.clamp.acm.HttpAutomationCompositionElement\n\
+    \        typeVersion: 1.0.0\n\n\nmanagement:\n  endpoints:\n    web:\n      exposure:\n\
+    \        include: health, metrics, prometheus\nserver:\n  port: 8084\n  servlet:\n\
+    \    context-path: /onap/httpparticipant\n  ssl:\n    enabled: false\n"
+  logback.xml: "<!--\n  ============LICENSE_START=======================================================\n\
+    \   Copyright (C) 2021 Nordix Foundation. All rights reserved.\n  ================================================================================\n\
+    \  Licensed under the Apache License, Version 2.0 (the \"License\");\n  you may\
+    \ not use this file except in compliance with the License.\n  You may obtain a\
+    \ copy of the License at\n       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \  Unless required by applicable law or agreed to in writing, software\n  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n  See the License for\
+    \ the specific language governing permissions and\n  limitations under the License.\n\
+    \  SPDX-License-Identifier: Apache-2.0\n  ============LICENSE_END=========================================================\n\
+    -->\n\n<configuration scan=\"true\" scanPeriod=\"30 seconds\" debug=\"false\"\
+    >\n\n    <appender name=\"ErrorOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/http-participant/error.log</file>\n    \
+    \    <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/http-participant/error.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <filter class=\"ch.qos.logback.classic.filter.ThresholdFilter\"\
+    >\n            <level>WARN</level>\n        </filter>\n        <encoder>\n   \
+    \         <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncErrorOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"ErrorOut\" />\n    </appender>\n\n    <appender name=\"DebugOut\" class=\"\
+    ch.qos.logback.core.rolling.RollingFileAppender\">\n        <file>/var/log/onap/policy/http-participant/debug.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/http-participant/debug.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%level|%logger{0}|%thread] %msg%n</pattern>\n        </encoder>\n    </appender>\n\
+    \n    <appender name=\"AsyncDebugOut\" class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"DebugOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"NetworkOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/http-participant/network.log</file>\n  \
+    \      <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/http-participant/network.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%t]%m%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender\
+    \ name=\"AsyncNetworkOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n \
+    \       <appender-ref ref=\"NetworkOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n        <encoder>\n\
+    \            <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</Pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncStdOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"STDOUT\" />\n    </appender>\n\n    <logger name=\"network\" level=\"\
+    INFO\" additivity=\"false\">\n        <appender-ref ref=\"AsyncNetworkOut\" />\n\
+    \        <appender-ref ref=\"AsyncStdOut\" />\n    </logger>\n\n    <logger name=\"\
+    org.eclipse.jetty.server.RequestLog\" level=\"info\" additivity=\"false\">\n \
+    \       <appender-ref ref=\"AsyncNetworkOut\" />\n        <appender-ref ref=\"\
+    AsyncStdOut\" />\n    </logger>\n\n    <root level=\"INFO\">\n        <appender-ref\
+    \ ref=\"AsyncDebugOut\" />\n        <appender-ref ref=\"AsyncErrorOut\" />\n \
+    \       <appender-ref ref=\"AsyncStdOut\" />\n    </root>\n\n</configuration>\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-clamp-ac-http-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-http-ppnt
+    helm.sh/chart: policy-clamp-ac-http-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-http-ppnt-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  KubernetesParticipantParameters.yaml: "#  ============LICENSE_START=======================================================\n\
+    #   Copyright (C) 2021-2022,2024 Nordix Foundation. All rights reserved.\n#  ================================================================================\n\
+    #  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may\
+    \ not use this file except in compliance with the License.\n#  You may obtain\
+    \ a copy of the License at\n#\n#       http://www.apache.org/licenses/LICENSE-2.0\n\
+    #\n#  Unless required by applicable law or agreed to in writing, software\n# \
+    \ distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT\
+    \ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the\
+    \ License for the specific language governing permissions and\n#  limitations\
+    \ under the License.\n#\n#  SPDX-License-Identifier: Apache-2.0\n#  ============LICENSE_END=========================================================\n\
+    \nspring:\n  autoconfigure:\n    exclude: >\n      org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,\n\
+    \      org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,\n\
+    \      org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration\n\
+    \  security:\n    user:\n      name: ${RESTSERVER_USER}\n      password: ${RESTSERVER_PASSWORD}\n\
+    \nsecurity:\n  enable-csrf: false\n\nparticipant:\n  localChartDirectory: /home/policy/local-charts\n\
+    \  infoFileName: CHART_INFO.json\n  intermediaryParameters:\n    topics:\n   \
+    \   operationTopic: policy-acruntime-participant\n      syncTopic: acm-ppnt-sync\n\
+    \    reportingTimeIntervalMs: 120000\n    description: Participant Description\n\
+    \    participantId: 101c62b3-8918-41b9-a747-d21eb79c6c02\n    clampAutomationCompositionTopics:\n\
+    \      topicSources:\n        -\n          useHttps: false\n          fetchTimeout:\
+    \ 15000\n          topic: policy-acruntime-participant\n          topicCommInfrastructure:\
+    \ kafka\n          servers:\n            - onap-strimzi-kafka-bootstrap:9092\n\
+    \          additionalProps:\n            group.id: policy-clamp-ac-k8s-ppnt\n\
+    \            allow.auto.create.topics: false\n            security.protocol: SASL_PLAINTEXT\n\
+    \            sasl.mechanism: SCRAM-SHA-512\n            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \        -\n          useHttps: false\n          fetchTimeout: 15000\n       \
+    \   topic: acm-ppnt-sync\n          topicCommInfrastructure: kafka\n         \
+    \ servers:\n            - onap-strimzi-kafka-bootstrap:9092\n          additionalProps:\n\
+    \            allow.auto.create.topics: false\n            security.protocol: SASL_PLAINTEXT\n\
+    \            sasl.mechanism: SCRAM-SHA-512\n            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \      topicSinks:\n        -\n          useHttps: false\n          fetchTimeout:\
+    \ 15000\n          topic: policy-acruntime-participant\n          topicCommInfrastructure:\
+    \ kafka\n          servers:\n            - onap-strimzi-kafka-bootstrap:9092\n\
+    \          additionalProps:\n            client.id: policy-clamp-ac-k8s-ppnt-client-id\n\
+    \            security.protocol: SASL_PLAINTEXT\n            sasl.mechanism: SCRAM-SHA-512\n\
+    \            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n    participantSupportedElementTypes:\n\
+    \      -\n        typeName: org.onap.policy.clamp.acm.K8SMicroserviceAutomationCompositionElement\n\
+    \        typeVersion: 1.0.0\n\nmanagement:\n  endpoints:\n    web:\n      exposure:\n\
+    \        include: health, metrics, prometheus\n\nserver:\n  # Configuration of\
+    \ the HTTP/REST server. The parameters are defined and handled by the springboot\
+    \ framework.\n  # See springboot documentation.\n  port: 8083\n  servlet:\n  \
+    \  context-path: /onap/policy/clamp/acm/k8sparticipant\n  ssl:\n    enabled: false\n\
+    \n\nlogging:\n  # Configuration of logging\n  level:\n    ROOT: INFO\n    org.springframework:\
+    \ ERROR\n    org.springframework.data: ERROR\n    org.springframework.web.reactive.function.client.ExchangeFunctions:\
+    \ ERROR\n    org.onap.policy.clamp.controlloop.participant.kubernetes: INFO\n\n\
+    \  file:\n    name: /var/log/onap/policy/clamp/application.log\n\nchart:\n  api:\n\
+    \    enabled: false\n\n# Permitted list of helm repositories. Values are updated\
+    \ from values.yaml\nhelm:\n  protocols:\n  - http\n  - https\n  repos:\n  - address:\
+    \ https://charts.konghq.com\n    repoName: kong\n  - address: https://charts.bitnami.com/bitnami\n\
+    \    repoName: bitnami\n"
+  logback.xml: "<!--\n  ============LICENSE_START=======================================================\n\
+    \  Copyright (C) 2021 Nordix Foundation. All rights reserved.\n  ================================================================================\n\
+    \  Licensed under the Apache License, Version 2.0 (the \"License\");\n  you may\
+    \ not use this file except in compliance with the License.\n  You may obtain a\
+    \ copy of the License at\n       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \  Unless required by applicable law or agreed to in writing, software\n  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n  See the License for\
+    \ the specific language governing permissions and\n  limitations under the License.\n\
+    \  SPDX-License-Identifier: Apache-2.0\n  ============LICENSE_END=========================================================\n\
+    -->\n\n<configuration scan=\"true\" scanPeriod=\"30 seconds\" debug=\"false\"\
+    >\n\n    <appender name=\"ErrorOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/k8s-participant/error.log</file>\n     \
+    \   <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/k8s-participant/error.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <filter class=\"ch.qos.logback.classic.filter.ThresholdFilter\"\
+    >\n            <level>WARN</level>\n        </filter>\n        <encoder>\n   \
+    \         <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncErrorOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"ErrorOut\" />\n    </appender>\n\n    <appender name=\"DebugOut\" class=\"\
+    ch.qos.logback.core.rolling.RollingFileAppender\">\n        <file>/var/log/onap/policy/k8s-participant/debug.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/k8s-participant/debug.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%level|%logger{0}|%thread] %msg%n</pattern>\n        </encoder>\n    </appender>\n\
+    \n    <appender name=\"AsyncDebugOut\" class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"DebugOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"NetworkOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/k8s-participant/network.log</file>\n   \
+    \     <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/k8s-participant/network.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%t]%m%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender\
+    \ name=\"AsyncNetworkOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n \
+    \       <appender-ref ref=\"NetworkOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n        <encoder>\n\
+    \            <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</Pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncStdOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"STDOUT\" />\n    </appender>\n\n    <logger name=\"network\" level=\"\
+    INFO\" additivity=\"false\">\n        <appender-ref ref=\"AsyncNetworkOut\" />\n\
+    \        <appender-ref ref=\"AsyncStdOut\" />\n    </logger>\n\n    <logger name=\"\
+    org.eclipse.jetty.server.RequestLog\" level=\"info\" additivity=\"false\">\n \
+    \       <appender-ref ref=\"AsyncNetworkOut\" />\n        <appender-ref ref=\"\
+    AsyncStdOut\" />\n    </logger>\n\n    <root level=\"INFO\">\n        <appender-ref\
+    \ ref=\"AsyncDebugOut\" />\n        <appender-ref ref=\"AsyncErrorOut\" />\n \
+    \       <appender-ref ref=\"AsyncStdOut\" />\n    </root>\n\n</configuration>\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-clamp-ac-k8s-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-k8s-ppnt
+    helm.sh/chart: policy-clamp-ac-k8s-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-k8s-ppnt-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  KserveParticipantParameters.yaml: "#  ============LICENSE_START=======================================================\n\
+    #  Copyright (C) 2023 Nordix Foundation. All rights reserved.\n#  ================================================================================\n\
+    #  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may\
+    \ not use this file except in compliance with the License.\n#  You may obtain\
+    \ a copy of the License at\n#       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \n#  Unless required by applicable law or agreed to in writing, software\n#  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the License for\
+    \ the specific language governing permissions and\n#  limitations under the License.\n\
+    \n#  SPDX-License-Identifier: Apache-2.0\n#  ============LICENSE_END=========================================================\n\
+    \nspring:\n  cloud:\n    kubernetes:\n      enabled: false\n    discovery:\n \
+    \     enabled: false\n  security:\n    user:\n      name: ${RESTSERVER_USER}\n\
+    \      password: ${RESTSERVER_PASSWORD}\n  autoconfigure:\n    exclude:\n    \
+    \  - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration\n\
+    \      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration\n\
+    \      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration\n\
+    \      - org.springframework.boot.autoconfigure.data.web.SpringDataWebAutoConfiguration\n\
+    \      - io.kubernetes.client.spring.extended.manifests.config.KubernetesManifestsAutoConfiguration\n\
+    \      - io.kubernetes.client.spring.extended.network.config.KubernetesLoadBalancerAutoConfiguration\n\
+    \nsecurity:\n  enable-csrf: false\n\nparticipant:\n  intermediaryParameters:\n\
+    \    topics:\n      operationTopic: policy-acruntime-participant\n      syncTopic:\
+    \ acm-ppnt-sync\n    reportingTimeIntervalMs: 120000\n    description: Participant\
+    \ Description\n    participantId: 101c62b3-8918-41b9-a747-d21eb79c6c04\n    clampAutomationCompositionTopics:\n\
+    \      topicSources:\n        -\n          useHttps: false\n          fetchTimeout:\
+    \ 15000\n          topic: policy-acruntime-participant\n          topicCommInfrastructure:\
+    \ kafka\n          servers:\n            - onap-strimzi-kafka-bootstrap:9092\n\
+    \          additionalProps:\n            group.id: policy-clamp-ac-kserve-ppnt\n\
+    \            allow.auto.create.topics: false\n            security.protocol: SASL_PLAINTEXT\n\
+    \            sasl.mechanism: SCRAM-SHA-512\n            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \        -\n          useHttps: false\n          fetchTimeout: 15000\n       \
+    \   topic: acm-ppnt-sync\n          topicCommInfrastructure: kafka\n         \
+    \ servers:\n            - onap-strimzi-kafka-bootstrap:9092\n          additionalProps:\n\
+    \            allow.auto.create.topics: false\n            security.protocol: SASL_PLAINTEXT\n\
+    \            sasl.mechanism: SCRAM-SHA-512\n            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \      topicSinks:\n        -\n          useHttps: false\n          fetchTimeout:\
+    \ 15000\n          topic: policy-acruntime-participant\n          topicCommInfrastructure:\
+    \ kafka\n          servers:\n            - onap-strimzi-kafka-bootstrap:9092\n\
+    \          additionalProps:\n            client.id: policy-clamp-ac-kserve-ppnt-client-id\n\
+    \            security.protocol: SASL_PLAINTEXT\n            sasl.mechanism: SCRAM-SHA-512\n\
+    \            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n    participantSupportedElementTypes:\n\
+    \      -\n        typeName: org.onap.policy.clamp.acm.KserveAutomationCompositionElement\n\
+    \        typeVersion: 1.0.1\n      -\n        typeName: org.onap.policy.clamp.acm.AutomationCompositionElement\n\
+    \        typeVersion: 1.0.0\n\ncustomresourcedefinition:\n  group: serving.kserve.io\n\
+    \  version: v1beta1\n  plural: inferenceservices\n  grace-period: 10\n\nmanagement:\n\
+    \  endpoints:\n    web:\n      base-path: /\n      exposure:\n        include:\
+    \ health, metrics, prometheus\nserver:\n  port: 8087\n  servlet:\n    context-path:\
+    \ /onap/policy/clamp/acm/kserveparticipant\n  ssl:\n    enabled: false\n"
+  logback.xml: "<!--\n  ============LICENSE_START=======================================================\n\
+    \  Copyright (C) 2023 Nordix Foundation. All rights reserved.\n  ================================================================================\n\
+    \  Licensed under the Apache License, Version 2.0 (the \"License\");\n  you may\
+    \ not use this file except in compliance with the License.\n  You may obtain a\
+    \ copy of the License at\n       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \  Unless required by applicable law or agreed to in writing, software\n  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n  See the License for\
+    \ the specific language governing permissions and\n  limitations under the License.\n\
+    \  SPDX-License-Identifier: Apache-2.0\n  ============LICENSE_END=========================================================\n\
+    -->\n\n<configuration scan=\"true\" scanPeriod=\"30 seconds\" debug=\"false\"\
+    >\n\n    <appender name=\"ErrorOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/kserve-participant/error.log</file>\n  \
+    \      <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/kserve-participant/error.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <filter class=\"ch.qos.logback.classic.filter.ThresholdFilter\"\
+    >\n            <level>WARN</level>\n        </filter>\n        <encoder>\n   \
+    \         <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncErrorOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"ErrorOut\" />\n    </appender>\n\n    <appender name=\"DebugOut\" class=\"\
+    ch.qos.logback.core.rolling.RollingFileAppender\">\n        <file>/var/log/onap/policy/kserve-participant/debug.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/kserve-participant/debug.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%level|%logger{0}|%thread] %msg%n</pattern>\n        </encoder>\n    </appender>\n\
+    \n    <appender name=\"AsyncDebugOut\" class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"DebugOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"NetworkOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/kserve-participant/network.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/kserve-participant/network.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%t]%m%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender\
+    \ name=\"AsyncNetworkOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n \
+    \       <appender-ref ref=\"NetworkOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n        <encoder>\n\
+    \            <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</Pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncStdOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"STDOUT\" />\n    </appender>\n\n    <logger name=\"network\" level=\"\
+    INFO\" additivity=\"false\">\n        <appender-ref ref=\"AsyncNetworkOut\" />\n\
+    \        <appender-ref ref=\"AsyncStdOut\" />\n    </logger>\n\n    <logger name=\"\
+    org.eclipse.jetty.server.RequestLog\" level=\"info\" additivity=\"false\">\n \
+    \       <appender-ref ref=\"AsyncNetworkOut\" />\n        <appender-ref ref=\"\
+    AsyncStdOut\" />\n    </logger>\n\n    <root level=\"INFO\">\n        <appender-ref\
+    \ ref=\"AsyncDebugOut\" />\n        <appender-ref ref=\"AsyncErrorOut\" />\n \
+    \       <appender-ref ref=\"AsyncStdOut\" />\n    </root>\n\n</configuration>\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-clamp-ac-kserve-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-kserve-ppnt
+    helm.sh/chart: policy-clamp-ac-kserve-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-kserve-ppnt-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  PolicyParticipantParameters.yaml: "#  ============LICENSE_START=======================================================\n\
+    #   Copyright (C) 2021-2024 Nordix Foundation.\n#  ================================================================================\n\
+    #  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may\
+    \ not use this file except in compliance with the License.\n#  You may obtain\
+    \ a copy of the License at\n#\n#       http://www.apache.org/licenses/LICENSE-2.0\n\
+    #\n#  Unless required by applicable law or agreed to in writing, software\n# \
+    \ distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT\
+    \ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the\
+    \ License for the specific language governing permissions and\n#  limitations\
+    \ under the License.\n#\n#  SPDX-License-Identifier: Apache-2.0\n#  ============LICENSE_END=========================================================\n\
+    \nspring:\n  autoconfigure:\n    exclude: >\n      org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,\n\
+    \      org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,\n\
+    \      org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration\n\
+    \  security:\n    user:\n      name: ${RESTSERVER_USER}\n      password: ${RESTSERVER_PASSWORD}\n\
+    \nsecurity:\n  enable-csrf: false\n\nparticipant:\n  pdpGroup: defaultGroup\n\
+    \  pdpType: apex\n  policyApiParameters:\n    clientName: api\n    hostname: policy-api\n\
+    \    port: 6969\n    userName: ${API_USER}\n    password: ${API_PASSWORD}\n  \
+    \  useHttps: \"false\"\n    allowSelfSignedCerts: true\n  policyPapParameters:\n\
+    \    clientName: pap\n    hostname: policy-pap\n    port: 6969\n    userName:\
+    \ ${PAP_USER}\n    password: ${PAP_PASSWORD}\n    useHttps: \"false\"\n    allowSelfSignedCerts:\
+    \ true\n  intermediaryParameters:\n    topics:\n      operationTopic: policy-acruntime-participant\n\
+    \      syncTopic: acm-ppnt-sync\n    reportingTimeIntervalMs: 120000\n    description:\
+    \ Participant Description\n    participantId: 101c62b3-8918-41b9-a747-d21eb79c6c03\n\
+    \    clampAutomationCompositionTopics:\n      topicSources:\n        -\n     \
+    \     useHttps: false\n          fetchTimeout: 15000\n          topic: policy-acruntime-participant\n\
+    \          topicCommInfrastructure: kafka\n          servers:\n            - onap-strimzi-kafka-bootstrap:9092\n\
+    \          additionalProps:\n            group.id: policy-clamp-ac-pf-ppnt\n \
+    \           allow.auto.create.topics: false\n            security.protocol: SASL_PLAINTEXT\n\
+    \            sasl.mechanism: SCRAM-SHA-512\n            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \        -\n          useHttps: false\n          fetchTimeout: 15000\n       \
+    \   topic: acm-ppnt-sync\n          topicCommInfrastructure: kafka\n         \
+    \ servers:\n            - onap-strimzi-kafka-bootstrap:9092\n          additionalProps:\n\
+    \            allow.auto.create.topics: false\n            security.protocol: SASL_PLAINTEXT\n\
+    \            sasl.mechanism: SCRAM-SHA-512\n            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \      topicSinks:\n        -\n          useHttps: false\n          fetchTimeout:\
+    \ 15000\n          topic: policy-acruntime-participant\n          topicCommInfrastructure:\
+    \ kafka\n          servers:\n            - onap-strimzi-kafka-bootstrap:9092\n\
+    \          additionalProps:\n            client.id: policy-clamp-ac-pf-ppnt-client-id\n\
+    \            security.protocol: SASL_PLAINTEXT\n            sasl.mechanism: SCRAM-SHA-512\n\
+    \            sasl.jaas.config: ${SASL_JAAS_CONFIG}\n    participantSupportedElementTypes:\n\
+    \      -\n        typeName: org.onap.policy.clamp.acm.PolicyAutomationCompositionElement\n\
+    \        typeVersion: 1.0.0\n\nmanagement:\n  endpoints:\n    web:\n      exposure:\n\
+    \        include: health, metrics, prometheus\n\nserver:\n  port: 8085\n  servlet:\n\
+    \    context-path: /onap/policyparticipant\n  ssl:\n    enabled: false\n"
+  logback.xml: "<!--\n  ============LICENSE_START=======================================================\n\
+    \   Copyright (C) 2021 Nordix Foundation. All rights reserved.\n  ================================================================================\n\
+    \  Licensed under the Apache License, Version 2.0 (the \"License\");\n  you may\
+    \ not use this file except in compliance with the License.\n  You may obtain a\
+    \ copy of the License at\n       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \  Unless required by applicable law or agreed to in writing, software\n  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n  See the License for\
+    \ the specific language governing permissions and\n  limitations under the License.\n\
+    \  SPDX-License-Identifier: Apache-2.0\n  ============LICENSE_END=========================================================\n\
+    -->\n\n<configuration scan=\"true\" scanPeriod=\"30 seconds\" debug=\"false\"\
+    >\n\n    <appender name=\"ErrorOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/pf-participant/error.log</file>\n      \
+    \  <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/pf-participant/error.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <filter class=\"ch.qos.logback.classic.filter.ThresholdFilter\"\
+    >\n            <level>WARN</level>\n        </filter>\n        <encoder>\n   \
+    \         <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncErrorOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"ErrorOut\" />\n    </appender>\n\n    <appender name=\"DebugOut\" class=\"\
+    ch.qos.logback.core.rolling.RollingFileAppender\">\n        <file>/var/log/onap/policy/pf-participant/debug.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/pf-participant/debug.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%level|%logger{0}|%thread] %msg%n</pattern>\n        </encoder>\n    </appender>\n\
+    \n    <appender name=\"AsyncDebugOut\" class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"DebugOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"NetworkOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/pf-participant/network.log</file>\n    \
+    \    <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/pf-participant/network.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%t]%m%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender\
+    \ name=\"AsyncNetworkOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n \
+    \       <appender-ref ref=\"NetworkOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n        <encoder>\n\
+    \            <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</Pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncStdOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"STDOUT\" />\n    </appender>\n\n    <logger name=\"network\" level=\"\
+    INFO\" additivity=\"false\">\n        <appender-ref ref=\"AsyncNetworkOut\" />\n\
+    \        <appender-ref ref=\"AsyncStdOut\" />\n    </logger>\n\n    <logger name=\"\
+    org.eclipse.jetty.server.RequestLog\" level=\"info\" additivity=\"false\">\n \
+    \       <appender-ref ref=\"AsyncNetworkOut\" />\n        <appender-ref ref=\"\
+    AsyncStdOut\" />\n    </logger>\n\n    <root level=\"INFO\">\n        <appender-ref\
+    \ ref=\"AsyncDebugOut\" />\n        <appender-ref ref=\"AsyncErrorOut\" />\n \
+    \       <appender-ref ref=\"AsyncStdOut\" />\n    </root>\n\n</configuration>\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-clamp-ac-pf-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-pf-ppnt
+    helm.sh/chart: policy-clamp-ac-pf-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-pf-ppnt-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  acRuntimeParameters.yaml: "#  ============LICENSE_START=======================================================\n\
+    #   Copyright (C) 2021-2025 OpenInfra Foundation Europe. All rights reserved.\n\
+    #  ================================================================================\n\
+    #  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may\
+    \ not use this file except in compliance with the License.\n#  You may obtain\
+    \ a copy of the License at\n#\n#       http://www.apache.org/licenses/LICENSE-2.0\n\
+    #\n#  Unless required by applicable law or agreed to in writing, software\n# \
+    \ distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT\
+    \ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the\
+    \ License for the specific language governing permissions and\n#  limitations\
+    \ under the License.\n#\n#  SPDX-License-Identifier: Apache-2.0\n#  ============LICENSE_END=========================================================\n\
+    \nspring:\n  security:\n    user:\n      name: ${RUNTIME_USER}\n      password:\
+    \ ${RUNTIME_PASSWORD}\n  mvc:\n    converters:\n      preferred-json-mapper: gson\n\
+    \  datasource:\n    url: jdbc:postgresql://policy-pg-primary:5432/clampacm\n \
+    \   driverClassName: org.postgresql.Driver\n    username: ${SQL_USER}\n    password:\
+    \ ${SQL_PASSWORD}\n    hikari:\n      connectionTimeout: 30000\n      idleTimeout:\
+    \ 600000\n      maxLifetime: 1800000\n      maximumPoolSize: 10\n  jpa:\n    hibernate:\n\
+    \      ddl-auto: update\n      naming:\n        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl\n\
+    \        implicit-strategy: org.onap.policy.common.spring.utils.CustomImplicitNamingStrategy\n\
+    \    properties:\n      hibernate:\n        dialect: org.hibernate.dialect.PostgreSQLDialect\n\
+    \        format_sql: true\n\nmetrics:\n  security:\n    disabled: false\n\nsecurity:\n\
+    \  enable-csrf: false\n\nserver:\n  port: 6969\n  servlet:\n    context-path:\
+    \ /onap/policy/clamp/acm\n  error:\n    path: /error\n  ssl:\n    enabled: false\n\
+    \nruntime:\n  topics:\n    operationTopic: policy-acruntime-participant\n    syncTopic:\
+    \ acm-ppnt-sync\n  participantParameters:\n    heartBeatMs: 120000\n    maxMessageAgeMs:\
+    \ 600000\n    maxStatusWaitMs: 100000\n    maxOperationWaitMs: 100000\n    updateParameters:\n\
+    \      maxRetryCount: 3\n      maxWaitMs: 100000\n  topicParameterGroup:\n   \
+    \ topicSources:\n      -\n        useHttps: false\n        fetchTimeout: 15000\n\
+    \        topic: policy-acruntime-participant\n        topicCommInfrastructure:\
+    \ kafka\n        servers:\n          - onap-strimzi-kafka-bootstrap:9092\n   \
+    \     additionalProps:\n          group.id: policy-clamp-runtime-acm\n       \
+    \   allow.auto.create.topics: false\n          security.protocol: SASL_PLAINTEXT\n\
+    \          sasl.mechanism: SCRAM-SHA-512\n          sasl.jaas.config: ${SASL_JAAS_CONFIG}\n\
+    \    topicSinks:\n      -\n        useHttps: false\n        fetchTimeout: 15000\n\
+    \        topic: policy-acruntime-participant\n        topicCommInfrastructure:\
+    \ kafka\n        servers:\n          - onap-strimzi-kafka-bootstrap:9092\n   \
+    \     additionalProps:\n          client.id: policy-clamp-runtime-acm-client-id\n\
+    \          security.protocol: SASL_PLAINTEXT\n          sasl.mechanism: SCRAM-SHA-512\n\
+    \          sasl.jaas.config: ${SASL_JAAS_CONFIG}\n      -\n        useHttps: false\n\
+    \        fetchTimeout: 15000\n        topic: acm-ppnt-sync\n        topicCommInfrastructure:\
+    \ kafka\n        servers:\n          - onap-strimzi-kafka-bootstrap:9092\n   \
+    \     additionalProps:\n          client.id: policy-clamp-runtime-acm-client-id\n\
+    \          security.protocol: SASL_PLAINTEXT\n          sasl.mechanism: SCRAM-SHA-512\n\
+    \          sasl.jaas.config: ${SASL_JAAS_CONFIG}\n  acmParameters:\n    toscaElementName:\
+    \ org.onap.policy.clamp.acm.AutomationCompositionElement\n    toscaCompositionName:\
+    \ org.onap.policy.clamp.acm.AutomationComposition\n\nmanagement:\n  endpoints:\n\
+    \    web:\n      exposure:\n        include: health, metrics, prometheus\n"
+  logback.xml: "<!--\n  ============LICENSE_START=======================================================\n\
+    \   Copyright (C) 2021-2022 Nordix Foundation.\n  ================================================================================\n\
+    \  Licensed under the Apache License, Version 2.0 (the \"License\");\n  you may\
+    \ not use this file except in compliance with the License.\n  You may obtain a\
+    \ copy of the License at\n       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \  Unless required by applicable law or agreed to in writing, software\n  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n  See the License for\
+    \ the specific language governing permissions and\n  limitations under the License.\n\
+    \  SPDX-License-Identifier: Apache-2.0\n  ============LICENSE_END=========================================================\n\
+    -->\n\n<configuration scan=\"true\" scanPeriod=\"30 seconds\" debug=\"false\"\
+    >\n\n    <appender name=\"ErrorOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/policy-clamp-runtime-acm/error.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/policy-clamp-runtime-acm/error.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <filter class=\"ch.qos.logback.classic.filter.ThresholdFilter\"\
+    >\n            <level>WARN</level>\n        </filter>\n        <encoder>\n   \
+    \         <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncErrorOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"ErrorOut\" />\n    </appender>\n\n    <appender name=\"DebugOut\" class=\"\
+    ch.qos.logback.core.rolling.RollingFileAppender\">\n        <file>/var/log/onap/policy/policy-clamp-runtime-acm/debug.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/policy-clamp-runtime-acm/debug.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%level|%logger{0}|%thread] %msg%n</pattern>\n        </encoder>\n    </appender>\n\
+    \n    <appender name=\"AsyncDebugOut\" class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"DebugOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"NetworkOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/policy-clamp-runtime-acm/network.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/policy-clamp-runtime-acm/network.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%t]%m%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender\
+    \ name=\"AsyncNetworkOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n \
+    \       <appender-ref ref=\"NetworkOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n        <encoder>\n\
+    \            <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</Pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncStdOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"STDOUT\" />\n    </appender>\n\n    <logger name=\"network\" level=\"\
+    INFO\" additivity=\"false\">\n        <appender-ref ref=\"AsyncNetworkOut\" />\n\
+    \        <appender-ref ref=\"AsyncStdOut\" />\n    </logger>\n\n    <logger name=\"\
+    org.eclipse.jetty.server.RequestLog\" level=\"info\" additivity=\"false\">\n \
+    \       <appender-ref ref=\"AsyncNetworkOut\" />\n        <appender-ref ref=\"\
+    AsyncStdOut\" />\n    </logger>\n\n    <root level=\"INFO\">\n        <appender-ref\
+    \ ref=\"AsyncDebugOut\" />\n        <appender-ref ref=\"AsyncErrorOut\" />\n \
+    \       <appender-ref ref=\"AsyncStdOut\" />\n    </root>\n\n</configuration>\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-clamp-runtime-acm
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-runtime-acm
+    helm.sh/chart: policy-clamp-runtime-acm-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-runtime-acm-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  logback.xml: "<!--\n  ============LICENSE_START=======================================================\n\
+    \   Copyright (C) 2020 Bell Canada. All rights reserved.\n   Modifications Copyright\
+    \ (C) 2021 AT&T Intellectual Property. All rights reserved.\n  ================================================================================\n\
+    \  Licensed under the Apache License, Version 2.0 (the \"License\");\n  you may\
+    \ not use this file except in compliance with the License.\n  You may obtain a\
+    \ copy of the License at\n       http://www.apache.org/licenses/LICENSE-2.0\n\
+    \  Unless required by applicable law or agreed to in writing, software\n  distributed\
+    \ under the License is distributed on an \"AS IS\" BASIS,\n  WITHOUT WARRANTIES\
+    \ OR CONDITIONS OF ANY KIND, either express or implied.\n  See the License for\
+    \ the specific language governing permissions and\n  limitations under the License.\n\
+    \  SPDX-License-Identifier: Apache-2.0\n  ============LICENSE_END=========================================================\n\
+    -->\n\n<configuration scan=\"true\" scanPeriod=\"30 seconds\" debug=\"false\"\
+    >\n\n    <appender name=\"ErrorOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/pap/error.log</file>\n        <rollingPolicy\
+    \ class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\">\n     \
+    \       <fileNamePattern>/var/log/onap/policy/pap/error.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <filter class=\"ch.qos.logback.classic.filter.ThresholdFilter\"\
+    >\n            <level>WARN</level>\n        </filter>\n        <encoder>\n   \
+    \         <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncErrorOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"ErrorOut\" />\n    </appender>\n\n    <appender name=\"DebugOut\" class=\"\
+    ch.qos.logback.core.rolling.RollingFileAppender\">\n        <file>/var/log/onap/policy/pap/debug.log</file>\n\
+    \        <rollingPolicy class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\"\
+    >\n            <fileNamePattern>/var/log/onap/policy/pap/debug.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%level|%logger{0}|%thread] %msg%n</pattern>\n        </encoder>\n    </appender>\n\
+    \n    <appender name=\"AsyncDebugOut\" class=\"ch.qos.logback.classic.AsyncAppender\"\
+    >\n        <appender-ref ref=\"DebugOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"NetworkOut\" class=\"ch.qos.logback.core.rolling.RollingFileAppender\"\
+    >\n        <file>/var/log/onap/policy/pap/network.log</file>\n        <rollingPolicy\
+    \ class=\"ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy\">\n     \
+    \       <fileNamePattern>/var/log/onap/policy/pap/network.%d{yyyy-MM-dd}.%i.log.zip\n\
+    \            </fileNamePattern>\n            <maxFileSize>50MB</maxFileSize>\n\
+    \            <maxHistory>30</maxHistory>\n            <totalSizeCap>10GB</totalSizeCap>\n\
+    \        </rollingPolicy>\n        <encoder>\n            <pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00,\
+    \ UTC}|%t]%m%n</pattern>\n        </encoder>\n    </appender>\n\n    <appender\
+    \ name=\"AsyncNetworkOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n \
+    \       <appender-ref ref=\"NetworkOut\" />\n    </appender>\n\n    <appender\
+    \ name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n        <encoder>\n\
+    \            <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS+00:00, UTC}|%level|%logger{0}|%thread]\
+    \ %msg%n</Pattern>\n        </encoder>\n    </appender>\n\n    <appender name=\"\
+    AsyncStdOut\" class=\"ch.qos.logback.classic.AsyncAppender\">\n        <appender-ref\
+    \ ref=\"STDOUT\" />\n    </appender>\n\n    <logger name=\"network\" level=\"\
+    INFO\" additivity=\"false\">\n        <appender-ref ref=\"AsyncNetworkOut\" />\n\
+    \        <appender-ref ref=\"AsyncStdOut\" />\n    </logger>\n\n    <logger name=\"\
+    org.eclipse.jetty.server.RequestLog\" level=\"info\" additivity=\"false\">\n \
+    \       <appender-ref ref=\"AsyncNetworkOut\" />\n        <appender-ref ref=\"\
+    AsyncStdOut\" />\n    </logger>\n\n    <root level=\"INFO\">\n        <appender-ref\
+    \ ref=\"AsyncDebugOut\" />\n        <appender-ref ref=\"AsyncErrorOut\" />\n \
+    \       <appender-ref ref=\"AsyncStdOut\" />\n    </root>\n\n</configuration>\n"
+  papParameters.yaml: "#  ============LICENSE_START=======================================================\n\
+    #   Copyright (C) 2022 Bell Canada. All rights reserved.\n#   Modifications Copyright\
+    \ \xA9 2022-2025 Nordix Foundation\n#  ================================================================================\n\
+    #  Licensed under the Apache License, Version 2.0 (the \"License\");\n#  you may\
+    \ not use this file except in compliance with the License.\n#  You may obtain\
+    \ a copy of the License at\n#\n#       http://www.apache.org/licenses/LICENSE-2.0\n\
+    #\n#  Unless required by applicable law or agreed to in writing, software\n# \
+    \ distributed under the License is distributed on an \"AS IS\" BASIS,\n#  WITHOUT\
+    \ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n#  See the\
+    \ License for the specific language governing permissions and\n#  limitations\
+    \ under the License.\n#\n#  SPDX-License-Identifier: Apache-2.0\n#  ============LICENSE_END=========================================================\n\
+    \nspring:\n  security:\n    user:\n      name: \"${RESTSERVER_USER}\"\n      password:\
+    \ \"${RESTSERVER_PASSWORD}\"\n  http:\n    converters:\n      preferred-json-mapper:\
+    \ gson\n  datasource:\n    url: jdbc:postgresql://policy-pg-primary:5432/policyadmin\n\
+    \    driverClassName: org.postgresql.Driver\n    username: \"${SQL_USER}\"\n \
+    \   password: \"${SQL_PASSWORD}\"\n    hikari:\n      connectionTimeout: 30000\n\
+    \      idleTimeout: 600000\n      maxLifetime: 1800000\n      maximumPoolSize:\
+    \ 10\n  jpa:\n    hibernate:\n      ddl-auto: none\n      naming:\n        physical-strategy:\
+    \ org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl\n       \
+    \ implicit-strategy: org.onap.policy.common.spring.utils.CustomImplicitNamingStrategy\n\
+    \nserver:\n  port: 6969\n  ssl:\n    enabled: false\n  servlet:\n    context-path:\
+    \ /policy/pap/v1\n\npap:\n  name: PapGroup\n  topic:\n    pdp-pap.name: policy-pdp-pap\n\
+    \    notification.name: policy-notification\n    heartbeat.name: policy-heartbeat\n\
+    \  pdpParameters:\n    heartBeatMs: 120000\n    updateParameters:\n      maxRetryCount:\
+    \ 1\n      maxWaitMs: 36000\n    stateChangeParameters:\n      maxRetryCount:\
+    \ 1\n      maxWaitMs: 36000\n  savePdpStatisticsInDb: true\n  topicParameterGroup:\n\
+    \    topicSources:\n      - useHttps: false\n        fetchTimeout: 15000\n   \
+    \     topic: policy-pdp-pap\n        servers:\n          - onap-strimzi-kafka-bootstrap:9092\n\
+    \        topicCommInfrastructure: kafka\n        additionalProps:\n          group.id\
+    \ : policy-pap\n          security.protocol: SASL_PLAINTEXT\n          sasl.mechanism:\
+    \ SCRAM-SHA-512\n          sasl.jaas.config: ${JAASLOGIN}\n      - useHttps: false\n\
+    \        fetchTimeout: 15000\n        topic: policy-heartbeat\n        effectiveTopic:\
+    \ policy-pdp-pap\n        servers:\n          - onap-strimzi-kafka-bootstrap:9092\n\
+    \        topicCommInfrastructure: kafka\n        additionalProps:\n          group.id\
+    \ : policy-pap\n          security.protocol: SASL_PLAINTEXT\n          sasl.mechanism:\
+    \ SCRAM-SHA-512\n          sasl.jaas.config: ${JAASLOGIN}\n    topicSinks:\n \
+    \     - useHttps: false\n        topic: policy-pdp-pap\n        servers:\n   \
+    \       - onap-strimzi-kafka-bootstrap:9092\n        topicCommInfrastructure:\
+    \ kafka\n        additionalProps:\n          group.id : policy-pap\n         \
+    \ security.protocol: SASL_PLAINTEXT\n          sasl.mechanism: SCRAM-SHA-512\n\
+    \          sasl.jaas.config: ${JAASLOGIN}\n      - useHttps: false\n        topic:\
+    \ policy-notification\n        servers:\n          - onap-strimzi-kafka-bootstrap:9092\n\
+    \        topicCommInfrastructure: kafka\n        additionalProps:\n          group.id\
+    \ : policy-pap\n          security.protocol: SASL_PLAINTEXT\n          sasl.mechanism:\
+    \ SCRAM-SHA-512\n          sasl.jaas.config: ${JAASLOGIN}\n\n# If Strimzi Kafka\
+    \ to be used for communication, replace following configuration for topicSources\
+    \ and topicSinks\n#          servers:\n#            - onap-:9092\n#          topicCommInfrastructure:\
+    \ kafka\n#          additionalProps:\n#            security.protocol: SASL_PLAINTEXT\n\
+    #            sasl.mechanism: SCRAM-SHA-512\n#            sasl.jaas.config: ${JAASLOGIN}\n\
+    \n  healthCheckRestClientParameters:\n  - clientName: api\n    hostname: policy-api\n\
+    \    port: 6969\n    userName: \"${API_USER}\"\n    password: \"${API_PASSWORD}\"\
+    \n    useHttps: false\n    basePath: policy/api/v1/healthcheck\n\nmanagement:\n\
+    \  endpoints:\n    web:\n      base-path: /\n      exposure:\n        include:\
+    \ health, metrics, prometheus\n      path-mapping.prometheus: metrics\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-pap
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-pap
+    helm.sh/chart: policy-pap-17.0.0
+    version: 17.0.0
+  name: onap-policy-pap-configmap
+  namespace: onap
+---
+apiVersion: v1
+data:
+  pg_hba.conf: '# pgpool Client Authentication Configuration File a custom version
+
+    # ===============================================
+
+    #
+
+    # The format rule in this file follows the rules in the PostgreSQL
+
+    # Administrator''s Guide. Refer to chapter "Client Authentication" for a
+
+    # complete description.  A short synopsis follows.
+
+    #
+
+    # This file controls: which hosts are allowed to connect, how clients
+
+    # are authenticated, which user names they can use, which databases they
+
+    # can access.  Records take one of these forms:
+
+    #
+
+    # local      DATABASE  USER  METHOD  [OPTION]
+
+    # host       DATABASE  USER  CIDR-ADDRESS  METHOD  [OPTION]
+
+    #
+
+    # (The uppercase items must be replaced by actual values.)
+
+    #
+
+    # The first field is the connection type: "local" is a Unix-domain
+
+    # socket, "host" is either a plain or SSL-encrypted TCP/IP socket.
+
+    #
+
+    # DATABASE can be "all", "sameuser", a database name, or a comma-separated
+
+    # list thereof. Note that "samegroup" like in PostgreSQL''s pg_hba.conf
+
+    # file is not supported, since pgpool does not know which group a user
+
+    # belongs to. Also note that the database specified here may not exist in
+
+    # the backend PostgreSQL. pgpool will authenticate based on the database''s
+
+    # name, not based on whether it exists or not.
+
+    #
+
+    # USER can be "all", a user name, or a comma-separated list thereof.  In
+
+    # both the DATABASE and USER fields you can also write a file name prefixed
+
+    # with "@" to include names from a separate file. Note that a group name
+
+    # prefixed with "+" like in PostgreSQL''s pg_hba.conf file is not supported
+
+    # because of the same reason as "samegroup" token. Also note that a user
+
+    # name specified here may not exist in the backend PostgreSQL. pgpool will
+
+    # authenticate based on the user''s name, not based on whether he/she exists.
+
+    #
+
+    # CIDR-ADDRESS specifies the set of hosts the record matches.
+
+    # It is made up of an IP address and a CIDR mask that is an integer
+
+    # (between 0 and 32 (IPv4) that specifies the number of significant bits in
+
+    # the mask.  Alternatively, you can write an IP address and netmask in
+
+    # separate columns to specify the set of hosts.
+
+    #
+
+    # METHOD can be "trust", "reject", "md5" or "pam".  Note that "pam" sends passwords
+
+    # in clear text.
+
+    #
+
+    # OPTION is the name of the PAM service. Default service name is "pgpool"
+
+    #
+
+    # Database and user names containing spaces, commas, quotes and other special
+
+    # characters must be quoted. Quoting one of the keywords "all" or "sameuser"
+
+    # makes the name lose its special character, and just match a database or
+
+    # username with that name.
+
+    #
+
+    # This file is read on pgpool startup.  If you edit the file on a running
+
+    # system, you have to restart the pgpool  for the changes to take effect.
+
+
+    # Put your actual configuration here
+
+    # ----------------------------------
+
+    #
+
+    # If you want to allow non-local connections, you need to add more
+
+    # "host" records. In that case you will also need to make pgpool listen
+
+    # on a non-local interface via the listen_addresses configuration parameter.
+
+    #
+
+
+    # TYPE  DATABASE    USER        CIDR-ADDRESS          METHOD
+
+
+    # "local" is for Unix domain socket connections only
+
+    #local   all         all                               trust
+
+    # IPv4 local connections:
+
+    host    all         all         0.0.0.0/0          md5
+
+    '
+  setup.sql: "--- System Setup\nSET application_name=\"container_setup\";\n\nCREATE\
+    \ EXTENSION IF NOT EXISTS pg_stat_statements;\nCREATE EXTENSION IF NOT EXISTS\
+    \ pgaudit;\n\nALTER USER postgres PASSWORD '${PG_ROOT_PASSWORD}';\n\nCREATE USER\
+    \ ${PG_PRIMARY_USER} WITH REPLICATION;\nALTER USER ${PG_PRIMARY_USER} PASSWORD\
+    \ '${PG_PRIMARY_PASSWORD}';\n\nCREATE USER \"${PG_USER}\" LOGIN;\nALTER USER \"\
+    ${PG_USER}\" PASSWORD '${PG_PASSWORD}';\n\nCREATE DATABASE ${PG_DATABASE};\nGRANT\
+    \ ALL PRIVILEGES ON DATABASE ${PG_DATABASE} TO \"${PG_USER}\";\n\nCREATE TABLE\
+    \ IF NOT EXISTS primarytable (key varchar(20), value varchar(20));\nGRANT ALL\
+    \ ON primarytable TO ${PG_PRIMARY_USER};\n\n--- PG_DATABASE Setup\n\n\\c ${PG_DATABASE}\n\
+    \nCREATE EXTENSION IF NOT EXISTS pg_stat_statements;\nCREATE EXTENSION IF NOT\
+    \ EXISTS pgaudit;\n\n--- Verify permissions via PG_USER\n\n\\c ${PG_DATABASE}\
+    \ \"${PG_USER}\";\n\nCREATE SCHEMA IF NOT EXISTS \"${PG_USER}\";\n\nCREATE TABLE\
+    \ IF NOT EXISTS \"${PG_USER}\".testtable (\n    name varchar(30) PRIMARY KEY,\n\
+    \    value varchar(50) NOT NULL,\n    updatedt timestamp NOT NULL\n);\n\nINSERT\
+    \ INTO \"${PG_USER}\".testtable (name, value, updatedt) VALUES ('CPU', '256',\
+    \ now());\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-postgres
+    app.kubernetes.io/instance: onap-policy
+    chart: postgres-13.1.0
+    heritage: Helm
+    release: onap
+  name: onap-policy-postgres
+  namespace: onap
+---
+apiVersion: v1
+data:
+  login: aGVhbHRoY2hlY2s=
+  password: emIhWHp0RzM0
+kind: Secret
+metadata:
+  labels:
+    app: policy-apex-pdp
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-apex-pdp
+    helm.sh/chart: policy-apex-pdp-17.0.0
+    version: 17.0.0
+  name: onap-policy-apex-pdp-restserver-creds
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: cG9saWN5YWRtaW4=
+  password: emIhWHp0RzM0
+kind: Secret
+metadata:
+  labels:
+    app: policy
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy
+    helm.sh/chart: policy-17.0.0
+    version: 17.0.0
+  name: onap-policy-api-user-creds
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: cnVudGltZVVzZXI=
+  password: Wmlib1RpcGRaZXl0OV0=
+kind: Secret
+metadata:
+  labels:
+    app: policy
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy
+    helm.sh/chart: policy-17.0.0
+    version: 17.0.0
+  name: onap-policy-app-user-creds
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: cGFydGljaXBhbnRVc2Vy
+  password: emIhWHp0RzM0
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-ac-a1pms-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-a1pms-ppnt
+    helm.sh/chart: policy-clamp-ac-a1pms-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-a1pms-ppnt-restserver-secret
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: cGFydGljaXBhbnRVc2Vy
+  password: emIhWHp0RzM0
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-ac-http-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-http-ppnt
+    helm.sh/chart: policy-clamp-ac-http-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-http-ppnt-restserver-secret
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: cGFydGljaXBhbnRVc2Vy
+  password: emIhWHp0RzM0
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-ac-k8s-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-k8s-ppnt
+    helm.sh/chart: policy-clamp-ac-k8s-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-k8s-ppnt-restserver-secret
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: cGFydGljaXBhbnRVc2Vy
+  password: emIhWHp0RzM0
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-ac-kserve-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-kserve-ppnt
+    helm.sh/chart: policy-clamp-ac-kserve-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-kserve-ppnt-restserver-secret
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: cGFydGljaXBhbnRVc2Vy
+  password: bm9uZQ==
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-ac-pf-ppnt
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-clamp-ac-pf-ppnt
+    helm.sh/chart: policy-clamp-ac-pf-ppnt-17.0.0
+    version: 17.0.0
+  name: onap-policy-clamp-ac-pf-ppnt-restserver-secret
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: VGFnYVhpa282LkZhamE=
+kind: Secret
+metadata:
+  labels:
+    app: policy
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy
+    helm.sh/chart: policy-17.0.0
+    version: 17.0.0
+  name: onap-policy-db-root-password
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: cG9saWN5LXVzZXI=
+  password: R2l3aUNlbmVUdWdvOCM=
+kind: Secret
+metadata:
+  labels:
+    app: policy
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy
+    helm.sh/chart: policy-17.0.0
+    version: 17.0.0
+  name: onap-policy-db-secret
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: VUxvNFk4Z05hb0V1ejZ5ZWdZOEpPalN1S3RDZVlhbzA=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0ib25hcC1wb2xpY3kta2Fma2EtdXNlciIgcGFzc3dvcmQ9IlVMbzRZOGdOYW9FdXo2eWVnWThKT2pTdUt0Q2VZYW8wIjs=
+kind: Secret
+metadata:
+  labels:
+    app: policy
+    app.kubernetes.io/instance: onap-policy-kafka-user
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-onap-policy-kafka-user
+    helm.sh/chart: policy-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 17.0.0
+  name: onap-policy-kafka-user
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: aGVhbHRoY2hlY2s=
+  password: emIhWHp0RzM0
+kind: Secret
+metadata:
+  labels:
+    app: policy-pap
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-pap
+    helm.sh/chart: policy-pap-17.0.0
+    version: 17.0.0
+  name: onap-policy-pap-distribution-secret
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: cG9saWN5YWRtaW4=
+  password: emIhWHp0RzM0
+kind: Secret
+metadata:
+  labels:
+    app: policy
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy
+    helm.sh/chart: policy-17.0.0
+    version: 17.0.0
+  name: onap-policy-pap-user-creds
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: SkVNOTllU2M=
+kind: Secret
+metadata:
+  labels:
+    app: policy-postgres
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-postgres
+    helm.sh/chart: postgres-13.1.0
+    version: 13.1.0
+  name: onap-policy-postgres-primary-password
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: TUtNWGF6czJPVkRobkJsVEVNMmRScm1RbDNXMEtUS1g=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0icG9saWN5LWFwZXgtcGRwLWt1IiBwYXNzd29yZD0iTUtNWGF6czJPVkRobkJsVEVNMmRScm1RbDNXMEtUS1giOw==
+kind: Secret
+metadata:
+  labels:
+    app: policy-apex-pdp
+    app.kubernetes.io/instance: policy-apex-pdp-ku
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-policy-apex-pdp-ku
+    helm.sh/chart: policy-apex-pdp-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 17.0.0
+  name: policy-apex-pdp-ku
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: dVRsOU54QjN5YUx5Mm1DMHZ3Qkh2Z3dNU05wbmdnMWE=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0icG9saWN5LWNsYW1wLWFjLWExcG1zLXBwbnQta3UiIHBhc3N3b3JkPSJ1VGw5TnhCM3lhTHkybUMwdndCSHZnd01TTnBuZ2cxYSI7
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-ac-a1pms-ppnt
+    app.kubernetes.io/instance: policy-clamp-ac-a1pms-ppnt-ku
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-policy-clamp-ac-a1pms-ppnt-ku
+    helm.sh/chart: policy-clamp-ac-a1pms-ppnt-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 17.0.0
+  name: policy-clamp-ac-a1pms-ppnt-ku
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: VmdaWGNPTFdBd3BaZXhmVHpoN3YyeW9mZ2tsTGNvMFU=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0icG9saWN5LWNsYW1wLWFjLWh0dHAtcHBudC1rdSIgcGFzc3dvcmQ9IlZnWlhjT0xXQXdwWmV4ZlR6aDd2MnlvZmdrbExjbzBVIjs=
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-ac-http-ppnt
+    app.kubernetes.io/instance: policy-clamp-ac-http-ppnt-ku
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-policy-clamp-ac-http-ppnt-ku
+    helm.sh/chart: policy-clamp-ac-http-ppnt-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 17.0.0
+  name: policy-clamp-ac-http-ppnt-ku
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: SG5YMmU4bXMwOVRwYzh4dXlUTkZSVkpweVhTTTBKWnE=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0icG9saWN5LWNsYW1wLWFjLWs4cy1wcG50LWt1IiBwYXNzd29yZD0iSG5YMmU4bXMwOVRwYzh4dXlUTkZSVkpweVhTTTBKWnEiOw==
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-ac-k8s-ppnt
+    app.kubernetes.io/instance: policy-clamp-ac-k8s-ppnt-ku
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-policy-clamp-ac-k8s-ppnt-ku
+    helm.sh/chart: policy-clamp-ac-k8s-ppnt-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 17.0.0
+  name: policy-clamp-ac-k8s-ppnt-ku
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: U096SFZ1OGRhOW5rOHdTelNNSFU1dW1tR1FFYm51bDk=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0icG9saWN5LWNsYW1wLWFjLWtzZXJ2ZS1wcG50LWt1IiBwYXNzd29yZD0iU096SFZ1OGRhOW5rOHdTelNNSFU1dW1tR1FFYm51bDkiOw==
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-ac-kserve-ppnt
+    app.kubernetes.io/instance: policy-clamp-ac-kserve-ppnt-ku
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-policy-clamp-ac-kserve-ppnt-ku
+    helm.sh/chart: policy-clamp-ac-kserve-ppnt-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 17.0.0
+  name: policy-clamp-ac-kserve-ppnt-ku
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: ZVR1UmhMdUpRQXd6NHlldktlZUNjRDRFRW1mMHZYMmg=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0icG9saWN5LWNsYW1wLWFjLXBmLXBwbnQta3UiIHBhc3N3b3JkPSJlVHVSaEx1SlFBd3o0eWV2S2VlQ2NENEVFbWYwdlgyaCI7
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-ac-pf-ppnt
+    app.kubernetes.io/instance: policy-clamp-ac-pf-ppnt-ku
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-policy-clamp-ac-pf-ppnt-ku
+    helm.sh/chart: policy-clamp-ac-pf-ppnt-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 17.0.0
+  name: policy-clamp-ac-pf-ppnt-ku
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: dE5ka2VxbU5aM29LblBwMURZYjA2M3duMFp3ZUE4NzY=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0icG9saWN5LWNsYW1wLXJ1bnRpbWUtYWNtLWt1IiBwYXNzd29yZD0idE5ka2VxbU5aM29LblBwMURZYjA2M3duMFp3ZUE4NzYiOw==
+kind: Secret
+metadata:
+  labels:
+    app: policy-clamp-runtime-acm
+    app.kubernetes.io/instance: policy-clamp-runtime-acm-ku
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-policy-clamp-runtime-acm-ku
+    helm.sh/chart: policy-clamp-runtime-acm-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 17.0.0
+  name: policy-clamp-runtime-acm-ku
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: RHJBZUx5aFVLRFh1VlQ0a0NTczVibXhQQlNFT0xXNm0=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0icG9saWN5LXBhcC1rdSIgcGFzc3dvcmQ9IkRyQWVMeWhVS0RYdVZUNGtDU3M1Ym14UEJTRU9MVzZtIjs=
+kind: Secret
+metadata:
+  labels:
+    app: policy-pap
+    app.kubernetes.io/instance: policy-pap-ku
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-policy-pap-ku
+    helm.sh/chart: policy-pap-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 17.0.0
+  name: policy-pap-ku
+  namespace: onap
+type: Opaque

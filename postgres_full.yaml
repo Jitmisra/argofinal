@@ -1,0 +1,1780 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    traffic.sidecar.istio.io/excludeInboundPorts: 4444,4567,4568
+    traffic.sidecar.istio.io/excludeOutboundPorts: 4444,4567,4568,443
+    traffic.sidecar.istio.io/includeInboundPorts: '*'
+  labels:
+    app: mariadb-galera
+    sidecar.istio.io/inject: 'false'
+    version: 11.1.2
+  name: mariadb-galera
+  namespace: onap
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: Parallel
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: mariadb-galera
+      app.kubernetes.io/name: mariadb
+  serviceName: mariadb-galera-internal
+  template:
+    metadata:
+      annotations:
+        k8s.mariadb.com/ca: faffea67147a24935106fa122a3559374b4ec16a416ffa8837e55883e6f27597
+        k8s.mariadb.com/client-cert: 3cbfe7335c4a512553c1af750122b0f18954c1e586844d63e28f971ee0c9902e
+        k8s.mariadb.com/config: 279cdf1be7c970a8b553a98a5a87a436bb35d27b584c20d0c335d7ca492370a7
+        k8s.mariadb.com/config-tls: 169a08c8cb9d9b89643267e720eb6e3c3c7894d6c18d429404a88d762c7388cd
+        k8s.mariadb.com/server-cert: 81895c1e58f1d04e6c75da7d84db03fcfeb24f514c2fa2f7261191003044a4d4
+        traffic.sidecar.istio.io/excludeInboundPorts: 4444,4567,4568
+        traffic.sidecar.istio.io/excludeOutboundPorts: 4444,4567,4568,443
+        traffic.sidecar.istio.io/includeInboundPorts: '*'
+      creationTimestamp: null
+      labels:
+        app: mariadb-galera
+        app.kubernetes.io/instance: mariadb-galera
+        app.kubernetes.io/name: mariadb
+        sidecar.istio.io/inject: 'false'
+        version: 11.1.2
+      name: mariadb-galera
+      namespace: onap
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+      automountServiceAccountToken: false
+      containers:
+      - env:
+        - name: MYSQL_TCP_PORT
+          value: '3306'
+        - name: MARIADB_ROOT_HOST
+          value: '%'
+        - name: CLUSTER_NAME
+          value: cluster.local
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: MARIADB_NAME
+          value: mariadb-galera
+        - name: TLS_ENABLED
+          value: 'true'
+        - name: TLS_CA_CERT_PATH
+          value: /etc/pki/ca.crt
+        - name: TLS_SERVER_CERT_PATH
+          value: /etc/pki/server.crt
+        - name: TLS_SERVER_KEY_PATH
+          value: /etc/pki/server.key
+        - name: TLS_CLIENT_CERT_PATH
+          value: /etc/pki/client.crt
+        - name: TLS_CLIENT_KEY_PATH
+          value: /etc/pki/client.key
+        - name: MARIADB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-mariadb-galera-db-root-password
+        - name: MYSQL_INITDB_SKIP_TZINFO
+          value: '1'
+        image: nexus3.onap.org:10001/mariadb:11.1.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          exec:
+            command:
+            - bash
+            - -c
+            - mariadb -u root -p"${MARIADB_ROOT_PASSWORD}" -e "SELECT 1;"
+          failureThreshold: 3
+          initialDelaySeconds: 150
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: mariadb
+        ports:
+        - containerPort: 3306
+          name: mariadb
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - bash
+            - -c
+            - mariadb -u root -p"${MARIADB_ROOT_PASSWORD}" -e "SELECT 1;"
+          failureThreshold: 3
+          initialDelaySeconds: 150
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+        startupProbe:
+          exec:
+            command:
+            - bash
+            - -c
+            - mariadb -u root -p"${MARIADB_ROOT_PASSWORD}" -e "SELECT 1;"
+          failureThreshold: 3
+          initialDelaySeconds: 150
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/mysql/conf.d
+          name: config
+        - mountPath: /etc/pki
+          name: pki
+        - mountPath: /var/lib/mysql
+          name: storage
+        - mountPath: /run/mysqld
+          name: run
+        - mountPath: /tmp
+          name: tmp
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: mariadb-galera
+      serviceAccountName: mariadb-galera
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        key: k8s.mariadb.com/ha
+        operator: Exists
+      volumes:
+      - name: config
+        projected:
+          defaultMode: 420
+          sources:
+          - configMap:
+              items:
+              - key: 0-default.cnf
+                path: 0-default.cnf
+              name: mariadb-galera-config-default
+          - configMap:
+              items:
+              - key: my.cnf
+                path: my.cnf
+              name: onap-mariadb-galera-configuration
+          - configMap:
+              items:
+              - key: 1-tls.cnf
+                path: 1-tls.cnf
+              name: mariadb-galera-config-tls
+      - name: pki
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: ca.crt
+                path: ca.crt
+              name: mariadb-galera-ca-bundle
+          - secret:
+              items:
+              - key: tls.crt
+                path: client.crt
+              - key: tls.key
+                path: client.key
+              name: mariadb-galera-client-cert
+          - secret:
+              items:
+              - key: tls.crt
+                path: server.crt
+              - key: tls.key
+                path: server.key
+              name: mariadb-galera-server-cert
+      - emptyDir:
+          sizeLimit: 64Mi
+        name: run
+      - emptyDir:
+          sizeLimit: 64Mi
+        name: tmp
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      creationTimestamp: null
+      labels:
+        pvc.k8s.mariadb.com/role: storage
+      name: storage
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 3Gi
+      storageClassName: smo-storage
+      volumeMode: Filesystem
+    status:
+      phase: Pending
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-postgres-primary
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/name: policy-postgres-primary
+    chart: postgres-13.1.0
+    heritage: Helm
+    name: policy-pg-primary
+    release: onap
+    version: 13.1.0
+  name: onap-policy-postgres-primary
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: policy-postgres-primary
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-postgres-primary
+        app.kubernetes.io/name: policy-postgres-primary
+        name: policy-pg-primary
+        release: onap
+        version: 13.1.0
+    spec:
+      containers:
+      - env:
+        - name: PGHOST
+          value: /tmp
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_MODE
+          value: primary
+        - name: PG_PRIMARY_HOST
+          value: policy-pg-primary
+        - name: PG_REPLICA_HOST
+          value: policy-pg-replica
+        - name: PG_PRIMARY_PORT
+          value: '5432'
+        - name: PG_PRIMARY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: PG_DATABASE
+          value: policyadmin
+        - name: PG_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-root-password
+        - name: PGDATA_PATH_OVERRIDE
+          value: data
+        image: nexus3.onap.org:10001/crunchydata/crunchy-postgres:centos8-13.2-4.6.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 300
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 5
+        name: policy-postgres
+        ports:
+        - containerPort: 5432
+          name: tcp-postgres
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /pgconf/pool_hba.conf
+          name: config
+          subPath: pool_hba.conf
+        - mountPath: /pgconf/setup.sql
+          name: pgconf
+          subPath: setup.sql
+        - mountPath: /pgdata
+          name: onap-policy-postgres-data
+        - mountPath: /backup
+          name: onap-policy-postgres-backup
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - "function prepare_password {\n  echo -n $1 | sed -e \"s/'/''/g\"\n}\nexport\
+          \ PG_PRIMARY_PASSWORD=`prepare_password $PG_PRIMARY_PASSWORD_INPUT`;\nexport\
+          \ PG_PASSWORD=`prepare_password $PG_PASSWORD_INPUT`;\nexport PG_ROOT_PASSWORD=`prepare_password\
+          \ $PG_ROOT_PASSWORD_INPUT`;\ncd /config-input && for PFILE in `ls -1 .`;\
+          \ do envsubst <${PFILE} >/config/${PFILE}; done\n"
+        command:
+        - sh
+        env:
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_PRIMARY_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: PG_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: PG_DATABASE
+          value: policyadmin
+        - name: PG_ROOT_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-root-password
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-postgres-update-config
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input/setup.sql
+          name: config
+          subPath: setup.sql
+        - mountPath: /config
+          name: pgconf
+      - command:
+        - /bin/sh
+        - -c
+        - 'chown 26:26 /podroot/;
+
+          chmod 700 /podroot/;
+
+          '
+        image: nexus3.onap.org:10001/busybox:1.37.0
+        imagePullPolicy: IfNotPresent
+        name: init-sysctl
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /podroot/
+          name: onap-policy-postgres-data
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: onap-policy-postgres-backup
+      - name: onap-policy-postgres-data
+        persistentVolumeClaim:
+          claimName: onap-policy-postgres-primary
+      - configMap:
+          defaultMode: 420
+          name: onap-policy-postgres
+        name: config
+      - emptyDir:
+          medium: Memory
+        name: pgconf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: policy-postgres-replica
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/name: policy-postgres-replica
+    chart: postgres-13.1.0
+    heritage: Helm
+    name: policy-pg-replica
+    release: onap
+    version: 13.1.0
+  name: onap-policy-postgres-replica
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: policy-postgres-replica
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: policy-postgres-replica
+        app.kubernetes.io/name: policy-postgres-replica
+        name: policy-pg-replica
+        release: onap
+        version: 13.1.0
+    spec:
+      containers:
+      - env:
+        - name: PGHOST
+          value: /tmp
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_MODE
+          value: replica
+        - name: PG_PRIMARY_HOST
+          value: policy-pg-primary
+        - name: PG_REPLICA_HOST
+          value: policy-pg-replica
+        - name: PG_PRIMARY_PORT
+          value: '5432'
+        - name: PG_PRIMARY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: PG_DATABASE
+          value: policyadmin
+        - name: PG_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-root-password
+        - name: PGDATA_PATH_OVERRIDE
+          value: data
+        image: nexus3.onap.org:10001/crunchydata/crunchy-postgres:centos8-13.2-4.6.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 300
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 5
+        name: policy-postgres
+        ports:
+        - containerPort: 5432
+          name: tcp-postgres
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /pgconf/pool_hba.conf
+          name: config
+          subPath: pool_hba.conf
+        - mountPath: /pgconf/setup.sql
+          name: pgconf
+          subPath: setup.sql
+        - mountPath: /pgdata
+          name: onap-policy-postgres-data
+        - mountPath: /backup
+          name: onap-policy-postgres-backup
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - "function prepare_password {\n  echo -n $1 | sed -e \"s/'/''/g\"\n}\nexport\
+          \ PG_PRIMARY_PASSWORD=`prepare_password $PG_PRIMARY_PASSWORD_INPUT`;\nexport\
+          \ PG_PASSWORD=`prepare_password $PG_PASSWORD_INPUT`;\nexport PG_ROOT_PASSWORD=`prepare_password\
+          \ $PG_ROOT_PASSWORD_INPUT`;\ncd /config-input && for PFILE in `ls -1 .`;\
+          \ do envsubst <${PFILE} >/config/${PFILE}; done\n"
+        command:
+        - sh
+        env:
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_PRIMARY_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-policy-db-secret
+        - name: PG_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-secret
+        - name: PG_DATABASE
+          value: policyadmin
+        - name: PG_ROOT_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-policy-db-root-password
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: policy-postgres-update-config
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input/setup.sql
+          name: config
+          subPath: setup.sql
+        - mountPath: /config
+          name: pgconf
+      - command:
+        - /bin/sh
+        - -c
+        - 'chown 26:26 /podroot/;
+
+          chmod 700 /podroot/;
+
+          '
+        image: nexus3.onap.org:10001/busybox:1.37.0
+        imagePullPolicy: IfNotPresent
+        name: init-sysctl
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /podroot/
+          name: onap-policy-postgres-data
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: onap-policy-postgres-backup
+      - name: onap-policy-postgres-data
+        persistentVolumeClaim:
+          claimName: onap-policy-postgres-replica
+      - configMap:
+          defaultMode: 420
+          name: onap-policy-postgres
+        name: config
+      - emptyDir:
+          medium: Memory
+        name: pgconf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: postgres-primary
+    app.kubernetes.io/instance: onap-postgres
+    app.kubernetes.io/name: postgres-primary
+    chart: postgres-13.1.0
+    heritage: Helm
+    name: pgset-primary
+    release: onap
+    version: 13.1.0
+  name: onap-postgres-primary
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: postgres-primary
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: postgres-primary
+        app.kubernetes.io/name: postgres-primary
+        name: pgset-primary
+        release: onap
+        version: 13.1.0
+    spec:
+      containers:
+      - env:
+        - name: PGHOST
+          value: /tmp
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_MODE
+          value: primary
+        - name: PG_PRIMARY_HOST
+          value: tcp-pgset-primary
+        - name: PG_REPLICA_HOST
+          value: tcp-pgset-replica
+        - name: PG_PRIMARY_PORT
+          value: '5432'
+        - name: PG_PRIMARY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-postgres-db-user-credentials
+        - name: PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-db-user-credentials
+        - name: PG_DATABASE
+          value: userdb
+        - name: PG_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-db-root-password
+        - name: PGDATA_PATH_OVERRIDE
+          value: data
+        image: nexus3.onap.org:10001/crunchydata/crunchy-postgres:centos8-13.2-4.6.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 300
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 5
+        name: postgres
+        ports:
+        - containerPort: 5432
+          name: tcp-postgres
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /pgconf/pool_hba.conf
+          name: config
+          subPath: pool_hba.conf
+        - mountPath: /pgconf/setup.sql
+          name: pgconf
+          subPath: setup.sql
+        - mountPath: /pgdata
+          name: onap-postgres-data
+        - mountPath: /backup
+          name: onap-postgres-backup
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - "function prepare_password {\n  echo -n $1 | sed -e \"s/'/''/g\"\n}\nexport\
+          \ PG_PRIMARY_PASSWORD=`prepare_password $PG_PRIMARY_PASSWORD_INPUT`;\nexport\
+          \ PG_PASSWORD=`prepare_password $PG_PASSWORD_INPUT`;\nexport PG_ROOT_PASSWORD=`prepare_password\
+          \ $PG_ROOT_PASSWORD_INPUT`;\ncd /config-input && for PFILE in `ls -1 .`;\
+          \ do envsubst <${PFILE} >/config/${PFILE}; done\n"
+        command:
+        - sh
+        env:
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_PRIMARY_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-postgres-db-user-credentials
+        - name: PG_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-db-user-credentials
+        - name: PG_DATABASE
+          value: userdb
+        - name: PG_ROOT_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-db-root-password
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: postgres-update-config
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input/setup.sql
+          name: config
+          subPath: setup.sql
+        - mountPath: /config
+          name: pgconf
+      - command:
+        - /bin/sh
+        - -c
+        - 'chown 26:26 /podroot/;
+
+          chmod 700 /podroot/;
+
+          '
+        image: nexus3.onap.org:10001/busybox:1.37.0
+        imagePullPolicy: IfNotPresent
+        name: init-sysctl
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /podroot/
+          name: onap-postgres-data
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: onap-postgres-backup
+      - name: onap-postgres-data
+        persistentVolumeClaim:
+          claimName: onap-postgres-primary
+      - configMap:
+          defaultMode: 420
+          name: onap-postgres
+        name: config
+      - emptyDir:
+          medium: Memory
+        name: pgconf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: postgres-replica
+    app.kubernetes.io/instance: onap-postgres
+    app.kubernetes.io/name: postgres-replica
+    chart: postgres-13.1.0
+    heritage: Helm
+    name: pgset-replica
+    release: onap
+    version: 13.1.0
+  name: onap-postgres-replica
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: postgres-replica
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: postgres-replica
+        app.kubernetes.io/name: postgres-replica
+        name: pgset-replica
+        release: onap
+        version: 13.1.0
+    spec:
+      containers:
+      - env:
+        - name: PGHOST
+          value: /tmp
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_MODE
+          value: replica
+        - name: PG_PRIMARY_HOST
+          value: tcp-pgset-primary
+        - name: PG_REPLICA_HOST
+          value: tcp-pgset-replica
+        - name: PG_PRIMARY_PORT
+          value: '5432'
+        - name: PG_PRIMARY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-postgres-db-user-credentials
+        - name: PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-db-user-credentials
+        - name: PG_DATABASE
+          value: userdb
+        - name: PG_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-db-root-password
+        - name: PGDATA_PATH_OVERRIDE
+          value: data
+        image: nexus3.onap.org:10001/crunchydata/crunchy-postgres:centos8-13.2-4.6.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 300
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 5
+        name: postgres
+        ports:
+        - containerPort: 5432
+          name: tcp-postgres
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 5432
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /pgconf/pool_hba.conf
+          name: config
+          subPath: pool_hba.conf
+        - mountPath: /pgconf/setup.sql
+          name: pgconf
+          subPath: setup.sql
+        - mountPath: /pgdata
+          name: onap-postgres-data
+        - mountPath: /backup
+          name: onap-postgres-backup
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - "function prepare_password {\n  echo -n $1 | sed -e \"s/'/''/g\"\n}\nexport\
+          \ PG_PRIMARY_PASSWORD=`prepare_password $PG_PRIMARY_PASSWORD_INPUT`;\nexport\
+          \ PG_PASSWORD=`prepare_password $PG_PASSWORD_INPUT`;\nexport PG_ROOT_PASSWORD=`prepare_password\
+          \ $PG_ROOT_PASSWORD_INPUT`;\ncd /config-input && for PFILE in `ls -1 .`;\
+          \ do envsubst <${PFILE} >/config/${PFILE}; done\n"
+        command:
+        - sh
+        env:
+        - name: PG_PRIMARY_USER
+          value: primaryuser
+        - name: MODE
+          value: postgres
+        - name: PG_PRIMARY_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-primary-password
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              key: login
+              name: onap-postgres-db-user-credentials
+        - name: PG_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-db-user-credentials
+        - name: PG_DATABASE
+          value: userdb
+        - name: PG_ROOT_PASSWORD_INPUT
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: onap-postgres-db-root-password
+        image: nexus3.onap.org:10001/dibi/envsubst:latest
+        imagePullPolicy: IfNotPresent
+        name: postgres-update-config
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /config-input/setup.sql
+          name: config
+          subPath: setup.sql
+        - mountPath: /config
+          name: pgconf
+      - command:
+        - /bin/sh
+        - -c
+        - 'chown 26:26 /podroot/;
+
+          chmod 700 /podroot/;
+
+          '
+        image: nexus3.onap.org:10001/busybox:1.37.0
+        imagePullPolicy: IfNotPresent
+        name: init-sysctl
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /podroot/
+          name: onap-postgres-data
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: onap-postgres-backup
+      - name: onap-postgres-data
+        persistentVolumeClaim:
+          claimName: onap-postgres-replica
+      - configMap:
+          defaultMode: 420
+          name: onap-postgres
+        name: config
+      - emptyDir:
+          medium: Memory
+        name: pgconf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    traffic.sidecar.istio.io/excludeInboundPorts: 4444,4567,4568
+    traffic.sidecar.istio.io/excludeOutboundPorts: 4444,4567,4568,443
+    traffic.sidecar.istio.io/includeInboundPorts: '*'
+  labels:
+    app: mariadb-galera
+    sidecar.istio.io/inject: 'false'
+    version: 11.1.2
+  name: mariadb-galera
+  namespace: onap
+spec:
+  clusterIP: 10.104.173.202
+  clusterIPs:
+  - 10.104.173.202
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: mariadb
+    port: 3306
+    protocol: TCP
+    targetPort: 3306
+  selector:
+    app.kubernetes.io/instance: mariadb-galera
+    app.kubernetes.io/name: mariadb
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    traffic.sidecar.istio.io/excludeInboundPorts: 4444,4567,4568
+    traffic.sidecar.istio.io/excludeOutboundPorts: 4444,4567,4568,443
+    traffic.sidecar.istio.io/includeInboundPorts: '*'
+  labels:
+    app: mariadb-galera
+    sidecar.istio.io/inject: 'false'
+    version: 11.1.2
+  name: mariadb-galera-internal
+  namespace: onap
+spec:
+  clusterIP: None
+  clusterIPs:
+  - None
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: mariadb
+    port: 3306
+    protocol: TCP
+    targetPort: 3306
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/instance: mariadb-galera
+    app.kubernetes.io/name: mariadb
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: policy-postgres
+    app.kubernetes.io/instance: onap-policy
+    chart: postgres-13.1.0
+    heritage: Helm
+    release: onap
+  name: policy-postgres
+  namespace: onap
+spec:
+  clusterIP: 10.96.214.54
+  clusterIPs:
+  - 10.96.214.54
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: tcp-postgres
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: policy-postgres
+    release: onap
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+data:
+  0-default.cnf: '[mariadb]
+
+    skip-name-resolve
+
+    temp-pool
+
+    '
+kind: ConfigMap
+metadata:
+  annotations:
+    traffic.sidecar.istio.io/excludeInboundPorts: 4444,4567,4568
+    traffic.sidecar.istio.io/excludeOutboundPorts: 4444,4567,4568,443
+    traffic.sidecar.istio.io/includeInboundPorts: '*'
+  labels:
+    app: mariadb-galera
+    sidecar.istio.io/inject: 'false'
+    version: 11.1.2
+  name: mariadb-galera-config-default
+  namespace: onap
+---
+apiVersion: v1
+data:
+  1-tls.cnf: '[mariadb]
+
+    ssl_cert = /etc/pki/server.crt
+
+    ssl_key = /etc/pki/server.key
+
+    ssl_ca = /etc/pki/ca.crt
+
+    require_secure_transport = false
+
+    tls_version = TLSv1.3
+
+    '
+kind: ConfigMap
+metadata:
+  annotations:
+    traffic.sidecar.istio.io/excludeInboundPorts: 4444,4567,4568
+    traffic.sidecar.istio.io/excludeOutboundPorts: 4444,4567,4568,443
+    traffic.sidecar.istio.io/includeInboundPorts: '*'
+  labels:
+    app: mariadb-galera
+    sidecar.istio.io/inject: 'false'
+    version: 11.1.2
+  name: mariadb-galera-config-tls
+  namespace: onap
+---
+apiVersion: v1
+data:
+  my.cnf: '[mysqld]
+
+    max_allowed_packet=256M
+
+    lower_case_table_names = 1
+
+
+    ## Character set
+
+    collation_server=utf8_unicode_ci
+
+    init_connect=''SET NAMES utf8''
+
+    character_set_server=utf8
+
+
+    ## MyISAM
+
+    key_buffer_size=32M
+
+    myisam_recover_options=FORCE,BACKUP
+
+
+    ## Safety
+
+    skip_host_cache
+
+    skip_name_resolve
+
+    max_allowed_packet=16M
+
+    max_connect_errors=1000000
+
+    sql_mode=STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_AUTO_VALUE_ON_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY
+
+    sysdate_is_now=1
+
+
+    ## Caches and Limits
+
+    tmp_table_size=32M
+
+    max_heap_table_size=32M
+
+    # Re-enabling as now works with Maria 10.1.2
+
+    query_cache_type=1
+
+    query_cache_limit=4M
+
+    query_cache_size=256M
+
+    max_connections=500
+
+    thread_cache_size=50
+
+    open_files_limit=65535
+
+    table_definition_cache=4096
+
+    table_open_cache=4096
+
+
+    ## InnoDB
+
+    innodb=FORCE
+
+    innodb_strict_mode=1
+
+    # Mandatory per https://github.com/codership/documentation/issues/25
+
+    innodb_autoinc_lock_mode=2
+
+    # Per https://www.percona.com/blog/2006/08/04/innodb-double-write/
+
+    innodb_doublewrite=1
+
+    innodb_flush_method=O_DIRECT
+
+    innodb_log_files_in_group=2
+
+    innodb_log_file_size=128M
+
+    innodb_flush_log_at_trx_commit=1
+
+    innodb_file_per_table=1
+
+    # 80% Memory is default reco.
+
+    # Need to re-evaluate when DB size grows
+
+    innodb_buffer_pool_size=2G
+
+    innodb_file_format=Barracuda
+
+    '
+kind: ConfigMap
+metadata:
+  labels:
+    app: mariadb-galera
+    app.kubernetes.io/instance: onap-mariadb-galera
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mariadb-galera
+    helm.sh/chart: mariadb-galera-16.0.0
+    version: 16.0.0
+  name: onap-mariadb-galera-configuration
+  namespace: onap
+---
+apiVersion: v1
+data:
+  pg_hba.conf: '# pgpool Client Authentication Configuration File a custom version
+
+    # ===============================================
+
+    #
+
+    # The format rule in this file follows the rules in the PostgreSQL
+
+    # Administrator''s Guide. Refer to chapter "Client Authentication" for a
+
+    # complete description.  A short synopsis follows.
+
+    #
+
+    # This file controls: which hosts are allowed to connect, how clients
+
+    # are authenticated, which user names they can use, which databases they
+
+    # can access.  Records take one of these forms:
+
+    #
+
+    # local      DATABASE  USER  METHOD  [OPTION]
+
+    # host       DATABASE  USER  CIDR-ADDRESS  METHOD  [OPTION]
+
+    #
+
+    # (The uppercase items must be replaced by actual values.)
+
+    #
+
+    # The first field is the connection type: "local" is a Unix-domain
+
+    # socket, "host" is either a plain or SSL-encrypted TCP/IP socket.
+
+    #
+
+    # DATABASE can be "all", "sameuser", a database name, or a comma-separated
+
+    # list thereof. Note that "samegroup" like in PostgreSQL''s pg_hba.conf
+
+    # file is not supported, since pgpool does not know which group a user
+
+    # belongs to. Also note that the database specified here may not exist in
+
+    # the backend PostgreSQL. pgpool will authenticate based on the database''s
+
+    # name, not based on whether it exists or not.
+
+    #
+
+    # USER can be "all", a user name, or a comma-separated list thereof.  In
+
+    # both the DATABASE and USER fields you can also write a file name prefixed
+
+    # with "@" to include names from a separate file. Note that a group name
+
+    # prefixed with "+" like in PostgreSQL''s pg_hba.conf file is not supported
+
+    # because of the same reason as "samegroup" token. Also note that a user
+
+    # name specified here may not exist in the backend PostgreSQL. pgpool will
+
+    # authenticate based on the user''s name, not based on whether he/she exists.
+
+    #
+
+    # CIDR-ADDRESS specifies the set of hosts the record matches.
+
+    # It is made up of an IP address and a CIDR mask that is an integer
+
+    # (between 0 and 32 (IPv4) that specifies the number of significant bits in
+
+    # the mask.  Alternatively, you can write an IP address and netmask in
+
+    # separate columns to specify the set of hosts.
+
+    #
+
+    # METHOD can be "trust", "reject", "md5" or "pam".  Note that "pam" sends passwords
+
+    # in clear text.
+
+    #
+
+    # OPTION is the name of the PAM service. Default service name is "pgpool"
+
+    #
+
+    # Database and user names containing spaces, commas, quotes and other special
+
+    # characters must be quoted. Quoting one of the keywords "all" or "sameuser"
+
+    # makes the name lose its special character, and just match a database or
+
+    # username with that name.
+
+    #
+
+    # This file is read on pgpool startup.  If you edit the file on a running
+
+    # system, you have to restart the pgpool  for the changes to take effect.
+
+
+    # Put your actual configuration here
+
+    # ----------------------------------
+
+    #
+
+    # If you want to allow non-local connections, you need to add more
+
+    # "host" records. In that case you will also need to make pgpool listen
+
+    # on a non-local interface via the listen_addresses configuration parameter.
+
+    #
+
+
+    # TYPE  DATABASE    USER        CIDR-ADDRESS          METHOD
+
+
+    # "local" is for Unix domain socket connections only
+
+    #local   all         all                               trust
+
+    # IPv4 local connections:
+
+    host    all         all         0.0.0.0/0          md5
+
+    '
+  setup.sql: "--- System Setup\nSET application_name=\"container_setup\";\n\nCREATE\
+    \ EXTENSION IF NOT EXISTS pg_stat_statements;\nCREATE EXTENSION IF NOT EXISTS\
+    \ pgaudit;\n\nALTER USER postgres PASSWORD '${PG_ROOT_PASSWORD}';\n\nCREATE USER\
+    \ ${PG_PRIMARY_USER} WITH REPLICATION;\nALTER USER ${PG_PRIMARY_USER} PASSWORD\
+    \ '${PG_PRIMARY_PASSWORD}';\n\nCREATE USER \"${PG_USER}\" LOGIN;\nALTER USER \"\
+    ${PG_USER}\" PASSWORD '${PG_PASSWORD}';\n\nCREATE DATABASE ${PG_DATABASE};\nGRANT\
+    \ ALL PRIVILEGES ON DATABASE ${PG_DATABASE} TO \"${PG_USER}\";\n\nCREATE TABLE\
+    \ IF NOT EXISTS primarytable (key varchar(20), value varchar(20));\nGRANT ALL\
+    \ ON primarytable TO ${PG_PRIMARY_USER};\n\n--- PG_DATABASE Setup\n\n\\c ${PG_DATABASE}\n\
+    \nCREATE EXTENSION IF NOT EXISTS pg_stat_statements;\nCREATE EXTENSION IF NOT\
+    \ EXISTS pgaudit;\n\n--- Verify permissions via PG_USER\n\n\\c ${PG_DATABASE}\
+    \ \"${PG_USER}\";\n\nCREATE SCHEMA IF NOT EXISTS \"${PG_USER}\";\n\nCREATE TABLE\
+    \ IF NOT EXISTS \"${PG_USER}\".testtable (\n    name varchar(30) PRIMARY KEY,\n\
+    \    value varchar(50) NOT NULL,\n    updatedt timestamp NOT NULL\n);\n\nINSERT\
+    \ INTO \"${PG_USER}\".testtable (name, value, updatedt) VALUES ('CPU', '256',\
+    \ now());\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: policy-postgres
+    app.kubernetes.io/instance: onap-policy
+    chart: postgres-13.1.0
+    heritage: Helm
+    release: onap
+  name: onap-policy-postgres
+  namespace: onap
+---
+apiVersion: v1
+data:
+  pg_hba.conf: '# pgpool Client Authentication Configuration File a custom version
+
+    # ===============================================
+
+    #
+
+    # The format rule in this file follows the rules in the PostgreSQL
+
+    # Administrator''s Guide. Refer to chapter "Client Authentication" for a
+
+    # complete description.  A short synopsis follows.
+
+    #
+
+    # This file controls: which hosts are allowed to connect, how clients
+
+    # are authenticated, which user names they can use, which databases they
+
+    # can access.  Records take one of these forms:
+
+    #
+
+    # local      DATABASE  USER  METHOD  [OPTION]
+
+    # host       DATABASE  USER  CIDR-ADDRESS  METHOD  [OPTION]
+
+    #
+
+    # (The uppercase items must be replaced by actual values.)
+
+    #
+
+    # The first field is the connection type: "local" is a Unix-domain
+
+    # socket, "host" is either a plain or SSL-encrypted TCP/IP socket.
+
+    #
+
+    # DATABASE can be "all", "sameuser", a database name, or a comma-separated
+
+    # list thereof. Note that "samegroup" like in PostgreSQL''s pg_hba.conf
+
+    # file is not supported, since pgpool does not know which group a user
+
+    # belongs to. Also note that the database specified here may not exist in
+
+    # the backend PostgreSQL. pgpool will authenticate based on the database''s
+
+    # name, not based on whether it exists or not.
+
+    #
+
+    # USER can be "all", a user name, or a comma-separated list thereof.  In
+
+    # both the DATABASE and USER fields you can also write a file name prefixed
+
+    # with "@" to include names from a separate file. Note that a group name
+
+    # prefixed with "+" like in PostgreSQL''s pg_hba.conf file is not supported
+
+    # because of the same reason as "samegroup" token. Also note that a user
+
+    # name specified here may not exist in the backend PostgreSQL. pgpool will
+
+    # authenticate based on the user''s name, not based on whether he/she exists.
+
+    #
+
+    # CIDR-ADDRESS specifies the set of hosts the record matches.
+
+    # It is made up of an IP address and a CIDR mask that is an integer
+
+    # (between 0 and 32 (IPv4) that specifies the number of significant bits in
+
+    # the mask.  Alternatively, you can write an IP address and netmask in
+
+    # separate columns to specify the set of hosts.
+
+    #
+
+    # METHOD can be "trust", "reject", "md5" or "pam".  Note that "pam" sends passwords
+
+    # in clear text.
+
+    #
+
+    # OPTION is the name of the PAM service. Default service name is "pgpool"
+
+    #
+
+    # Database and user names containing spaces, commas, quotes and other special
+
+    # characters must be quoted. Quoting one of the keywords "all" or "sameuser"
+
+    # makes the name lose its special character, and just match a database or
+
+    # username with that name.
+
+    #
+
+    # This file is read on pgpool startup.  If you edit the file on a running
+
+    # system, you have to restart the pgpool  for the changes to take effect.
+
+
+    # Put your actual configuration here
+
+    # ----------------------------------
+
+    #
+
+    # If you want to allow non-local connections, you need to add more
+
+    # "host" records. In that case you will also need to make pgpool listen
+
+    # on a non-local interface via the listen_addresses configuration parameter.
+
+    #
+
+
+    # TYPE  DATABASE    USER        CIDR-ADDRESS          METHOD
+
+
+    # "local" is for Unix domain socket connections only
+
+    #local   all         all                               trust
+
+    # IPv4 local connections:
+
+    host    all         all         0.0.0.0/0          md5
+
+    '
+  setup.sql: "--- System Setup\nSET application_name=\"container_setup\";\n\nCREATE\
+    \ EXTENSION IF NOT EXISTS pg_stat_statements;\nCREATE EXTENSION IF NOT EXISTS\
+    \ pgaudit;\n\nALTER USER postgres PASSWORD '${PG_ROOT_PASSWORD}';\n\nCREATE USER\
+    \ ${PG_PRIMARY_USER} WITH REPLICATION;\nALTER USER ${PG_PRIMARY_USER} PASSWORD\
+    \ '${PG_PRIMARY_PASSWORD}';\n\nCREATE USER \"${PG_USER}\" LOGIN;\nALTER USER \"\
+    ${PG_USER}\" PASSWORD '${PG_PASSWORD}';\n\nCREATE DATABASE ${PG_DATABASE};\nGRANT\
+    \ ALL PRIVILEGES ON DATABASE ${PG_DATABASE} TO \"${PG_USER}\";\n\nCREATE TABLE\
+    \ IF NOT EXISTS primarytable (key varchar(20), value varchar(20));\nGRANT ALL\
+    \ ON primarytable TO ${PG_PRIMARY_USER};\n\n--- PG_DATABASE Setup\n\n\\c ${PG_DATABASE}\n\
+    \nCREATE EXTENSION IF NOT EXISTS pg_stat_statements;\nCREATE EXTENSION IF NOT\
+    \ EXISTS pgaudit;\n\n--- Verify permissions via PG_USER\n\n\\c ${PG_DATABASE}\
+    \ \"${PG_USER}\";\n\nCREATE SCHEMA IF NOT EXISTS \"${PG_USER}\";\n\nCREATE TABLE\
+    \ IF NOT EXISTS \"${PG_USER}\".testtable (\n    name varchar(30) PRIMARY KEY,\n\
+    \    value varchar(50) NOT NULL,\n    updatedt timestamp NOT NULL\n);\n\nINSERT\
+    \ INTO \"${PG_USER}\".testtable (name, value, updatedt) VALUES ('CPU', '256',\
+    \ now());\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app: postgres
+    app.kubernetes.io/instance: onap-postgres
+    chart: postgres-13.1.0
+    heritage: Helm
+    release: onap
+  name: onap-postgres
+  namespace: onap
+---
+apiVersion: v1
+data:
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJsekNDQVQyZ0F3SUJBZ0lSQUl6V1ZyQVE1ekpQSUZmb0dpeDM5NEV3Q2dZSUtvWkl6ajBFQXdJd0hERWEKTUJnR0ExVUVBeE1SYldGeWFXRmtZaTFuWVd4bGNtRXRZMkV3SGhjTk1qWXdNVEl6TURjeU9ETXlXaGNOTWprdwpNVEl5TURneU9ETXlXakFjTVJvd0dBWURWUVFERXhGdFlYSnBZV1JpTFdkaGJHVnlZUzFqWVRCWk1CTUdCeXFHClNNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJJWmtVU0ZyQW5BRGtGeGJaS0t4VDdoVFl0Slp6UGVJQ2Y2NWVGaFkKVWIvQk5wd3ZWWVNMdUc1S1p6R3pGa28rdVFOS3hleFA0dE8wQU1TQUxIamMzUCtqWURCZU1BNEdBMVVkRHdFQgovd1FFQXdJQ0JEQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01CMEdBMVVkRGdRV0JCVEpoYk9qNVJjV2FGR3o3YXpLCmhOTm5zTlJXOGpBY0JnTlZIUkVFRlRBVGdoRnRZWEpwWVdSaUxXZGhiR1Z5WVMxallUQUtCZ2dxaGtqT1BRUUQKQWdOSUFEQkZBaUVBcDB1UlpqajFyR2pSVnlrTGNZeHVXR0Y1Rk9ManZ4QnBFUnQxUjJVQUNDd0NJQUtLdmxnSwpldWtGUDRhMCt2MXc4V1k3TW5vZjREcU1mTVFzUUgrcUt2T0QKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  ca.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUVGdzA3R0NxZndBNjM5RDlTZFc1aUNkNTdxSGZXcVlyclNvSllCNDE1M3RvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFaG1SUklXc0NjQU9RWEZ0a29yRlB1Rk5pMGxuTTk0Z0ovcmw0V0ZoUnY4RTJuQzlWaEl1NApia3BuTWJNV1NqNjVBMHJGN0UvaTA3UUF4SUFzZU56Yy93PT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+kind: Secret
+metadata:
+  labels:
+    k8s.mariadb.com/watch: ''
+  name: mariadb-galera-ca
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJsekNDQVQyZ0F3SUJBZ0lSQUl6V1ZyQVE1ekpQSUZmb0dpeDM5NEV3Q2dZSUtvWkl6ajBFQXdJd0hERWEKTUJnR0ExVUVBeE1SYldGeWFXRmtZaTFuWVd4bGNtRXRZMkV3SGhjTk1qWXdNVEl6TURjeU9ETXlXaGNOTWprdwpNVEl5TURneU9ETXlXakFjTVJvd0dBWURWUVFERXhGdFlYSnBZV1JpTFdkaGJHVnlZUzFqWVRCWk1CTUdCeXFHClNNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJJWmtVU0ZyQW5BRGtGeGJaS0t4VDdoVFl0Slp6UGVJQ2Y2NWVGaFkKVWIvQk5wd3ZWWVNMdUc1S1p6R3pGa28rdVFOS3hleFA0dE8wQU1TQUxIamMzUCtqWURCZU1BNEdBMVVkRHdFQgovd1FFQXdJQ0JEQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01CMEdBMVVkRGdRV0JCVEpoYk9qNVJjV2FGR3o3YXpLCmhOTm5zTlJXOGpBY0JnTlZIUkVFRlRBVGdoRnRZWEpwWVdSaUxXZGhiR1Z5WVMxallUQUtCZ2dxaGtqT1BRUUQKQWdOSUFEQkZBaUVBcDB1UlpqajFyR2pSVnlrTGNZeHVXR0Y1Rk9ManZ4QnBFUnQxUjJVQUNDd0NJQUtLdmxnSwpldWtGUDRhMCt2MXc4V1k3TW5vZjREcU1mTVFzUUgrcUt2T0QKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+kind: Secret
+metadata:
+  annotations:
+    traffic.sidecar.istio.io/excludeInboundPorts: 4444,4567,4568
+    traffic.sidecar.istio.io/excludeOutboundPorts: 4444,4567,4568,443
+    traffic.sidecar.istio.io/includeInboundPorts: '*'
+  labels:
+    app: mariadb-galera
+    sidecar.istio.io/inject: 'false'
+    version: 11.1.2
+  name: mariadb-galera-ca-bundle
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJzakNDQVZtZ0F3SUJBZ0lSQUsyU1pZY09nWjlYbXU0OXVQZXV5OG93Q2dZSUtvWkl6ajBFQXdJd0hERWEKTUJnR0ExVUVBeE1SYldGeWFXRmtZaTFuWVd4bGNtRXRZMkV3SGhjTk1qWXdNVEl6TURjeU9ETXlXaGNOTWpZdwpOREl6TURneU9ETXlXakFnTVI0d0hBWURWUVFERXhWdFlYSnBZV1JpTFdkaGJHVnlZUzFqYkdsbGJuUXdXVEFUCkJnY3Foa2pPUFFJQkJnZ3Foa2pPUFFNQkJ3TkNBQVJ6OHV4dWFXeVpjMmd2THJpY1lrSzI0b0l3Rm82eFY3am4KVm5BdVlwR2E4UEkwRkRoY24vanc1WXdrQlIvK2lqblRyd1UxVURrTDlJbGNOemZUcmh0d28zZ3dkakFPQmdOVgpIUThCQWY4RUJBTUNBNGd3RXdZRFZSMGxCQXd3Q2dZSUt3WUJCUVVIQXdJd0RBWURWUjBUQVFIL0JBSXdBREFmCkJnTlZIU01FR0RBV2dCVEpoYk9qNVJjV2FGR3o3YXpLaE5ObnNOUlc4akFnQmdOVkhSRUVHVEFYZ2hWdFlYSnAKWVdSaUxXZGhiR1Z5WVMxamJHbGxiblF3Q2dZSUtvWkl6ajBFQXdJRFJ3QXdSQUlnZVNYTDZhVDBWNng3U3FETAo1TURsMzZ4cEhMMVk0RVJGNE1ScDBKNW5uVDBDSUh6Mzh5SEs0RlJvWnBQdUNCUjlieHRuSkxBV0NkT1VJZGlvCnpDcGJ2VVlYCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUtKUHJqLy90RWxMSWkvUmZ5c2luUi9PaENIOSs5NzZCcVJoYWcxdUoxdG9vQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFYy9Mc2JtbHNtWE5vTHk2NG5HSkN0dUtDTUJhT3NWZTQ1MVp3TG1LUm12RHlOQlE0WEovNAo4T1dNSkFVZi9vbzUwNjhGTlZBNUMvU0pYRGMzMDY0YmNBPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+kind: Secret
+metadata:
+  labels:
+    k8s.mariadb.com/watch: ''
+  name: mariadb-galera-client-cert
+  namespace: onap
+type: kubernetes.io/tls
+---
+apiVersion: v1
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR5VENDQTIrZ0F3SUJBZ0lSQU9RZmZwNTh2Y1VBZ0NpdmI1d0RkaFV3Q2dZSUtvWkl6ajBFQXdJd0hERWEKTUJnR0ExVUVBeE1SYldGeWFXRmtZaTFuWVd4bGNtRXRZMkV3SGhjTk1qWXdNVEl6TURjeU9ETXlXaGNOTWpZdwpOREl6TURneU9ETXlXakF3TVM0d0xBWURWUVFERXlWdFlYSnBZV1JpTFdkaGJHVnlZUzV2Ym1Gd0xuTjJZeTVqCmJIVnpkR1Z5TG14dlkyRnNNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUV1Q3Y1SWE3QTBpUSsKUVhTZjk0KzFabDRhTkRtNlZjMXdOSm5UUzQwNHFDb25rR3U1a3ROT2poQ2xoWlZxMmV1dWkvcTdKMjkzTWlvTQpJSUk2Z1pVTUxhT0NBbnd3Z2dKNE1BNEdBMVVkRHdFQi93UUVBd0lEcURBVEJnTlZIU1VFRERBS0JnZ3JCZ0VGCkJRY0RBVEFNQmdOVkhSTUJBZjhFQWpBQU1COEdBMVVkSXdRWU1CYUFGTW1GczZQbEZ4Wm9VYlB0ck1xRTAyZXcKMUZieU1JSUNJQVlEVlIwUkJJSUNGekNDQWhPQ0pXMWhjbWxoWkdJdFoyRnNaWEpoTG05dVlYQXVjM1pqTG1OcwpkWE4wWlhJdWJHOWpZV3lDRjIxaGNtbGhaR0l0WjJGc1pYSmhMbTl1WVhBdWMzWmpnaE50WVhKcFlXUmlMV2RoCmJHVnlZUzV2Ym1Gd2dnNXRZWEpwWVdSaUxXZGhiR1Z5WVlJd0tpNXRZWEpwWVdSaUxXZGhiR1Z5WVMxcGJuUmwKY201aGJDNXZibUZ3TG5OMll5NWpiSFZ6ZEdWeUxteHZZMkZzZ2lJcUxtMWhjbWxoWkdJdFoyRnNaWEpoTFdsdQpkR1Z5Ym1Gc0xtOXVZWEF1YzNaamdoNHFMbTFoY21saFpHSXRaMkZzWlhKaExXbHVkR1Z5Ym1Gc0xtOXVZWENDCkdTb3ViV0Z5YVdGa1lpMW5ZV3hsY21FdGFXNTBaWEp1WVd5Q0xXMWhjbWxoWkdJdFoyRnNaWEpoTFhCeWFXMWgKY25rdWIyNWhjQzV6ZG1NdVkyeDFjM1JsY2k1c2IyTmhiSUlmYldGeWFXRmtZaTFuWVd4bGNtRXRjSEpwYldGeQplUzV2Ym1Gd0xuTjJZNEliYldGeWFXRmtZaTFuWVd4bGNtRXRjSEpwYldGeWVTNXZibUZ3Z2hadFlYSnBZV1JpCkxXZGhiR1Z5WVMxd2NtbHRZWEo1Z2k5dFlYSnBZV1JpTFdkaGJHVnlZUzF6WldOdmJtUmhjbmt1YjI1aGNDNXoKZG1NdVkyeDFjM1JsY2k1c2IyTmhiSUloYldGeWFXRmtZaTFuWVd4bGNtRXRjMlZqYjI1a1lYSjVMbTl1WVhBdQpjM1pqZ2gxdFlYSnBZV1JpTFdkaGJHVnlZUzF6WldOdmJtUmhjbmt1YjI1aGNJSVliV0Z5YVdGa1lpMW5ZV3hsCmNtRXRjMlZqYjI1a1lYSjVnZ2xzYjJOaGJHaHZjM1F3Q2dZSUtvWkl6ajBFQXdJRFNBQXdSUUlnSXJZRmdPcUYKRmdkeDJmSGhDZS9MNFhCcFNEOUhPYzJ0OEhiTHRlcmpjckFDSVFEdzhTL0xDNXBLaitnV3g0Vzh3K2tXdEtaUgp4b25rT3RhWk1YU1FVRzQ0VVE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUZzVTE2VmRDa29sWUJhZVhHSHhJMU1BRW5Pd0JvTnV6aitaSmFGVUM4ZEFvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFdUN2NUlhN0EwaVErUVhTZjk0KzFabDRhTkRtNlZjMXdOSm5UUzQwNHFDb25rR3U1a3ROTwpqaENsaFpWcTJldXVpL3E3SjI5M01pb01JSUk2Z1pVTUxRPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+kind: Secret
+metadata:
+  labels:
+    k8s.mariadb.com/watch: ''
+  name: mariadb-galera-server-cert
+  namespace: onap
+type: kubernetes.io/tls
+---
+apiVersion: v1
+data:
+  login: bWFyaWFiYWNrdXA=
+  password: SmUxNUViVDc=
+kind: Secret
+metadata:
+  labels:
+    app: mariadb-galera
+    app.kubernetes.io/instance: onap-mariadb-galera
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mariadb-galera
+    helm.sh/chart: mariadb-galera-16.0.0
+    version: 16.0.0
+  name: onap-mariadb-galera-db-backup-credentials
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: R1hmNTRyRXo=
+kind: Secret
+metadata:
+  labels:
+    app: mariadb-galera
+    app.kubernetes.io/instance: onap-mariadb-galera
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mariadb-galera
+    helm.sh/chart: mariadb-galera-16.0.0
+    version: 16.0.0
+  name: onap-mariadb-galera-db-root-password
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: bXktdXNlcg==
+  password: b29hMkZzazE=
+kind: Secret
+metadata:
+  labels:
+    app: mariadb-galera
+    app.kubernetes.io/instance: onap-mariadb-galera
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mariadb-galera
+    helm.sh/chart: mariadb-galera-16.0.0
+    version: 16.0.0
+  name: onap-mariadb-galera-db-user-credentials
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: SkVNOTllU2M=
+kind: Secret
+metadata:
+  labels:
+    app: policy-postgres
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy-postgres
+    helm.sh/chart: postgres-13.1.0
+    version: 13.1.0
+  name: onap-policy-postgres-primary-password
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: YUMyNmtJejk=
+kind: Secret
+metadata:
+  labels:
+    app: postgres
+    app.kubernetes.io/instance: onap-postgres
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgres
+    helm.sh/chart: postgres-13.1.0
+    version: 13.1.0
+  name: onap-postgres-db-root-password
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  login: dGVzdHVzZXI=
+  password: VkxwNzFmckE=
+kind: Secret
+metadata:
+  labels:
+    app: postgres
+    app.kubernetes.io/instance: onap-postgres
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgres
+    helm.sh/chart: postgres-13.1.0
+    version: 13.1.0
+  name: onap-postgres-db-user-credentials
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: S09WOThHU2o=
+kind: Secret
+metadata:
+  labels:
+    app: postgres
+    app.kubernetes.io/instance: onap-postgres
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgres
+    helm.sh/chart: postgres-13.1.0
+    version: 13.1.0
+  name: onap-postgres-primary-password
+  namespace: onap
+type: Opaque

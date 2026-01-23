@@ -1,0 +1,1909 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: entity-operator
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: entity-operator
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-entity-operator
+  name: onap-strimzi-entity-operator
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      strimzi.io/cluster: onap-strimzi
+      strimzi.io/kind: Kafka
+      strimzi.io/name: onap-strimzi-entity-operator
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        strimzi.io/cluster-ca-cert-generation: '0'
+        strimzi.io/cluster-ca-key-generation: '0'
+        strimzi.io/server-cert-hash: a68651da55222bfb
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/instance: onap-strimzi
+        app.kubernetes.io/managed-by: strimzi-cluster-operator
+        app.kubernetes.io/name: entity-operator
+        app.kubernetes.io/part-of: strimzi-onap-strimzi
+        strimzi.io/cluster: onap-strimzi
+        strimzi.io/component-type: entity-operator
+        strimzi.io/kind: Kafka
+        strimzi.io/name: onap-strimzi-entity-operator
+    spec:
+      containers:
+      - args:
+        - /opt/strimzi/bin/topic_operator_run.sh
+        env:
+        - name: STRIMZI_RESOURCE_LABELS
+          value: strimzi.io/cluster=onap-strimzi
+        - name: STRIMZI_KAFKA_BOOTSTRAP_SERVERS
+          value: onap-strimzi-kafka-bootstrap:9091
+        - name: STRIMZI_NAMESPACE
+          value: onap
+        - name: STRIMZI_SECURITY_PROTOCOL
+          value: SSL
+        - name: STRIMZI_TLS_ENABLED
+          value: 'true'
+        - name: STRIMZI_GC_LOG_ENABLED
+          value: 'false'
+        image: quay.io/strimzi/operator:0.46.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthy
+            port: healthcheck
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: topic-operator
+        ports:
+        - containerPort: 8080
+          name: healthcheck
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: healthcheck
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: '2'
+            memory: 2Gi
+          requests:
+            cpu: 100m
+            memory: 1Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          readOnlyRootFilesystem: true
+          runAsGroup: 1001
+          runAsNonRoot: true
+          runAsUser: 1001
+        startupProbe:
+          failureThreshold: 12
+          httpGet:
+            path: /healthy
+            port: healthcheck
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp
+          name: strimzi-to-tmp
+        - mountPath: /opt/topic-operator/custom-config/
+          name: entity-topic-operator-metrics-and-logging
+        - mountPath: /etc/eto-certs/
+          name: eto-certs
+        - mountPath: /etc/tls-sidecar/cluster-ca-certs/
+          name: cluster-ca-certs
+      - args:
+        - /opt/strimzi/bin/user_operator_run.sh
+        env:
+        - name: STRIMZI_KAFKA_BOOTSTRAP_SERVERS
+          value: onap-strimzi-kafka-bootstrap:9091
+        - name: STRIMZI_NAMESPACE
+          value: onap
+        - name: STRIMZI_LABELS
+          value: strimzi.io/cluster=onap-strimzi
+        - name: STRIMZI_CA_KEY_NAME
+          value: onap-strimzi-clients-ca
+        - name: STRIMZI_CA_CERT_NAME
+          value: onap-strimzi-clients-ca-cert
+        - name: STRIMZI_CA_NAMESPACE
+          value: onap
+        - name: STRIMZI_CA_VALIDITY
+          value: '365'
+        - name: STRIMZI_CA_RENEWAL
+          value: '30'
+        - name: STRIMZI_CLUSTER_CA_CERT_SECRET_NAME
+          value: onap-strimzi-cluster-ca-cert
+        - name: STRIMZI_EO_KEY_SECRET_NAME
+          value: onap-strimzi-entity-user-operator-certs
+        - name: STRIMZI_GC_LOG_ENABLED
+          value: 'false'
+        - name: STRIMZI_SECRET_PREFIX
+        - name: STRIMZI_ACLS_ADMIN_API_SUPPORTED
+          value: 'true'
+        image: quay.io/strimzi/operator:0.46.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthy
+            port: healthcheck
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: user-operator
+        ports:
+        - containerPort: 8081
+          name: healthcheck
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: healthcheck
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: '2'
+            memory: 2Gi
+          requests:
+            cpu: 100m
+            memory: 1Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          readOnlyRootFilesystem: true
+          runAsGroup: 1001
+          runAsNonRoot: true
+          runAsUser: 1001
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp
+          name: strimzi-uo-tmp
+        - mountPath: /opt/user-operator/custom-config/
+          name: entity-user-operator-metrics-and-logging
+        - mountPath: /etc/euo-certs/
+          name: euo-certs
+        - mountPath: /etc/tls-sidecar/cluster-ca-certs/
+          name: cluster-ca-certs
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-strimzi-entity-operator
+      serviceAccountName: onap-strimzi-entity-operator
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: onap-strimzi-entity-topic-operator-config
+        name: entity-topic-operator-metrics-and-logging
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 5Mi
+        name: strimzi-to-tmp
+      - name: eto-certs
+        secret:
+          defaultMode: 292
+          secretName: onap-strimzi-entity-topic-operator-certs
+      - configMap:
+          defaultMode: 420
+          name: onap-strimzi-entity-user-operator-config
+        name: entity-user-operator-metrics-and-logging
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 5Mi
+        name: strimzi-uo-tmp
+      - name: euo-certs
+        secret:
+          defaultMode: 292
+          secretName: onap-strimzi-entity-user-operator-certs
+      - name: cluster-ca-certs
+        secret:
+          defaultMode: 292
+          secretName: onap-strimzi-cluster-ca-cert
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  labels:
+    app: strimzi-kafka
+    app.kubernetes.io/instance: onap-strimzi-kafka
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka-bridge
+    app.kubernetes.io/part-of: strimzi-onap-strimzi-kafka
+    helm.sh/chart: strimzi-kafka-bridge-13.0.3
+    strimzi.io/cluster: onap-strimzi-kafka
+    strimzi.io/component-type: kafka-bridge
+    strimzi.io/kind: KafkaBridge
+    strimzi.io/name: onap-strimzi-kafka-bridge
+    version: 13.0.3
+  name: onap-strimzi-kafka-bridge
+  namespace: onap
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      strimzi.io/cluster: onap-strimzi-kafka
+      strimzi.io/kind: KafkaBridge
+      strimzi.io/name: onap-strimzi-kafka-bridge
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        strimzi.io/auth-hash: '-1632758148'
+        strimzi.io/configuration-hash: 37741d51
+      creationTimestamp: null
+      labels:
+        app: strimzi-kafka
+        app.kubernetes.io/instance: onap-strimzi-kafka
+        app.kubernetes.io/managed-by: strimzi-cluster-operator
+        app.kubernetes.io/name: kafka-bridge
+        app.kubernetes.io/part-of: strimzi-onap-strimzi-kafka
+        helm.sh/chart: strimzi-kafka-bridge-13.0.3
+        strimzi.io/cluster: onap-strimzi-kafka
+        strimzi.io/component-type: kafka-bridge
+        strimzi.io/kind: KafkaBridge
+        strimzi.io/name: onap-strimzi-kafka-bridge
+        version: 13.0.3
+    spec:
+      affinity: {}
+      containers:
+      - args:
+        - /opt/strimzi/bin/docker/kafka_bridge_run.sh
+        env:
+        - name: KAFKA_BRIDGE_METRICS_ENABLED
+          value: 'false'
+        - name: STRIMZI_GC_LOG_ENABLED
+          value: 'false'
+        - name: KAFKA_BRIDGE_SASL_USERNAME
+          value: strimzi-kafka-admin
+        - name: KAFKA_BRIDGE_SASL_PASSWORD_FILE
+          value: strimzi-kafka-admin/password
+        - name: KAFKA_BRIDGE_SASL_MECHANISM
+          value: scram-sha-512
+        image: quay.io/strimzi/kafka-bridge:0.32.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthy
+            port: rest-api
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: onap-strimzi-kafka-bridge
+        ports:
+        - containerPort: 8080
+          name: rest-api
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: rest-api
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: '2'
+            memory: 2Gi
+          requests:
+            cpu: 100m
+            memory: 1Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          readOnlyRootFilesystem: true
+          runAsGroup: 1001
+          runAsNonRoot: true
+          runAsUser: 1001
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp
+          name: strimzi-tmp
+        - mountPath: /opt/strimzi/custom-config/
+          name: kafka-bridge-configurations
+        - mountPath: /opt/strimzi/bridge-password/strimzi-kafka-admin
+          name: strimzi-kafka-admin
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: onap-strimzi-kafka-bridge
+      serviceAccountName: onap-strimzi-kafka-bridge
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 5Mi
+        name: strimzi-tmp
+      - configMap:
+          defaultMode: 420
+          name: onap-strimzi-kafka-bridge-config
+        name: kafka-bridge-configurations
+      - name: strimzi-kafka-admin
+        secret:
+          defaultMode: 292
+          secretName: strimzi-kafka-admin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    strimzi.io/discovery: "[ {\n  \"port\" : 9092,\n  \"tls\" : false,\n  \"protocol\"\
+      \ : \"kafka\",\n  \"auth\" : \"scram-sha-512\"\n}, {\n  \"port\" : 9093,\n \
+      \ \"tls\" : true,\n  \"protocol\" : \"kafka\",\n  \"auth\" : \"tls\"\n}, {\n\
+      \  \"port\" : 9094,\n  \"tls\" : true,\n  \"protocol\" : \"kafka\",\n  \"auth\"\
+      \ : \"tls\"\n} ]"
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: kafka
+    strimzi.io/discovery: 'true'
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+  name: onap-strimzi-kafka-bootstrap
+  namespace: onap
+spec:
+  clusterIP: 10.111.247.146
+  clusterIPs:
+  - 10.111.247.146
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: tcp-replication
+    port: 9091
+    protocol: TCP
+    targetPort: 9091
+  - name: tcp-clients
+    port: 9092
+    protocol: TCP
+    targetPort: 9092
+  - name: tcp-clientstls
+    port: 9093
+    protocol: TCP
+    targetPort: 9093
+  selector:
+    strimzi.io/broker-role: 'true'
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    strimzi.io/discovery: "[ {\n  \"port\" : 8080,\n  \"tls\" : false,\n  \"auth\"\
+      \ : \"none\",\n  \"protocol\" : \"http\"\n} ]"
+  labels:
+    app: strimzi-kafka
+    app.kubernetes.io/instance: onap-strimzi-kafka
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka-bridge
+    app.kubernetes.io/part-of: strimzi-onap-strimzi-kafka
+    helm.sh/chart: strimzi-kafka-bridge-13.0.3
+    strimzi.io/cluster: onap-strimzi-kafka
+    strimzi.io/component-type: kafka-bridge
+    strimzi.io/discovery: 'true'
+    strimzi.io/kind: KafkaBridge
+    strimzi.io/name: onap-strimzi-kafka-bridge
+    version: 13.0.3
+  name: onap-strimzi-kafka-bridge-service
+  namespace: onap
+spec:
+  clusterIP: 10.100.87.40
+  clusterIPs:
+  - 10.100.87.40
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: rest-api
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    strimzi.io/cluster: onap-strimzi-kafka
+    strimzi.io/kind: KafkaBridge
+    strimzi.io/name: onap-strimzi-kafka-bridge
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: kafka
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+  name: onap-strimzi-kafka-brokers
+  namespace: onap
+spec:
+  clusterIP: None
+  clusterIPs:
+  - None
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: tcp-ctrlplane
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  - name: tcp-replication
+    port: 9091
+    protocol: TCP
+    targetPort: 9091
+  - name: tcp-kafkaagent
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  - name: tcp-clients
+    port: 9092
+    protocol: TCP
+    targetPort: 9092
+  - name: tcp-clientstls
+    port: 9093
+    protocol: TCP
+    targetPort: 9093
+  publishNotReadyAddresses: true
+  selector:
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: kafka
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+  name: onap-strimzi-kafka-external-bootstrap
+  namespace: onap
+spec:
+  clusterIP: 10.102.133.31
+  clusterIPs:
+  - 10.102.133.31
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: tcp-external
+    nodePort: 30493
+    port: 9094
+    protocol: TCP
+    targetPort: 9094
+  selector:
+    strimzi.io/broker-role: 'true'
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+  sessionAffinity: None
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: kafka
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+    strimzi.io/pool-name: onap-strimzi-broker
+  name: onap-strimzi-onap-strimzi-broker-0
+  namespace: onap
+spec:
+  clusterIP: 10.109.233.236
+  clusterIPs:
+  - 10.109.233.236
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: tcp-external
+    nodePort: 30490
+    port: 9094
+    protocol: TCP
+    targetPort: 9094
+  selector:
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+    strimzi.io/pod-name: onap-strimzi-onap-strimzi-broker-0
+    strimzi.io/pool-name: onap-strimzi-broker
+  sessionAffinity: None
+  type: NodePort
+---
+apiVersion: v1
+data:
+  log4j2.properties: '# Do not change this generated file. Logging can be configured
+    in the corresponding Kubernetes resource.
+
+    name=TOConfig
+
+    appender.console.type=Console
+
+    appender.console.name=STDOUT
+
+    appender.console.layout.type=PatternLayout
+
+    appender.console.layout.pattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
+
+    rootLogger.level=INFO
+
+    rootLogger.appenderRefs=stdout
+
+    rootLogger.appenderRef.console.ref=STDOUT
+
+    rootLogger.additivity=false
+
+    logger.jetty.name=org.eclipse.jetty
+
+    logger.jetty.level=INFO
+
+    logger.jetty.additivity=false
+
+
+    monitorInterval=30
+
+    '
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: entity-topic-operator
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: entity-topic-operator
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-entity-topic-operator
+  name: onap-strimzi-entity-topic-operator-config
+  namespace: onap
+---
+apiVersion: v1
+data:
+  log4j2.properties: '# Do not change this generated file. Logging can be configured
+    in the corresponding Kubernetes resource.
+
+    name=UOConfig
+
+    appender.console.type=Console
+
+    appender.console.name=STDOUT
+
+    appender.console.layout.type=PatternLayout
+
+    appender.console.layout.pattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
+
+    rootLogger.level=INFO
+
+    rootLogger.appenderRefs=stdout
+
+    rootLogger.appenderRef.console.ref=STDOUT
+
+    rootLogger.additivity=false
+
+    logger.jetty.name=org.eclipse.jetty
+
+    logger.jetty.level=INFO
+
+    logger.jetty.additivity=false
+
+
+    monitorInterval=30
+
+    '
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: entity-user-operator
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: entity-user-operator
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-entity-user-operator
+  name: onap-strimzi-entity-user-operator-config
+  namespace: onap
+---
+apiVersion: v1
+data:
+  application.properties: '##############################
+
+    ##############################
+
+    # This file is automatically generated by the Strimzi Cluster Operator
+
+    # Any changes to this file will be ignored and overwritten!
+
+    ##############################
+
+    ##############################
+
+
+    ##########
+
+    # Bridge ID
+
+    ##########
+
+    bridge.id=onap-strimzi-kafka
+
+
+    ##########
+
+    # Kafka bootstrap servers
+
+    ##########
+
+    kafka.bootstrap.servers=onap-strimzi-kafka-bootstrap:9092
+
+
+    ##########
+
+    # Authentication configuration
+
+    ##########
+
+    kafka.sasl.mechanism=SCRAM-SHA-512
+
+    kafka.sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule
+    required username="strimzi-kafka-admin" password="${strimzidir:/opt/strimzi/bridge-password/strimzi-kafka-admin:password}";
+
+
+    ##########
+
+    # Apache Kafka AdminClient
+
+    ##########
+
+    ##########
+
+    # Config providers
+
+    ##########
+
+    kafka.admin.config.providers=strimzienv,strimzifile,strimzidir
+
+    kafka.admin.config.providers.strimzienv.class=org.apache.kafka.common.config.provider.EnvVarConfigProvider
+
+    kafka.admin.config.providers.strimzienv.param.allowlist.pattern=.*
+
+    kafka.admin.config.providers.strimzifile.class=org.apache.kafka.common.config.provider.FileConfigProvider
+
+    kafka.admin.config.providers.strimzifile.param.allowed.paths=/opt/strimzi
+
+    kafka.admin.config.providers.strimzidir.class=org.apache.kafka.common.config.provider.DirectoryConfigProvider
+
+    kafka.admin.config.providers.strimzidir.param.allowed.paths=/opt/strimzi
+
+
+    ##########
+
+    # Apache Kafka Producer
+
+    ##########
+
+    ##########
+
+    # Config providers
+
+    ##########
+
+    kafka.producer.config.providers=strimzienv,strimzifile,strimzidir
+
+    kafka.producer.config.providers.strimzienv.class=org.apache.kafka.common.config.provider.EnvVarConfigProvider
+
+    kafka.producer.config.providers.strimzienv.param.allowlist.pattern=.*
+
+    kafka.producer.config.providers.strimzifile.class=org.apache.kafka.common.config.provider.FileConfigProvider
+
+    kafka.producer.config.providers.strimzifile.param.allowed.paths=/opt/strimzi
+
+    kafka.producer.config.providers.strimzidir.class=org.apache.kafka.common.config.provider.DirectoryConfigProvider
+
+    kafka.producer.config.providers.strimzidir.param.allowed.paths=/opt/strimzi
+
+
+    ##########
+
+    # Apache Kafka Consumer
+
+    ##########
+
+    ##########
+
+    # Config providers
+
+    ##########
+
+    kafka.consumer.config.providers=strimzienv,strimzifile,strimzidir
+
+    kafka.consumer.config.providers.strimzienv.class=org.apache.kafka.common.config.provider.EnvVarConfigProvider
+
+    kafka.consumer.config.providers.strimzienv.param.allowlist.pattern=.*
+
+    kafka.consumer.config.providers.strimzifile.class=org.apache.kafka.common.config.provider.FileConfigProvider
+
+    kafka.consumer.config.providers.strimzifile.param.allowed.paths=/opt/strimzi
+
+    kafka.consumer.config.providers.strimzidir.class=org.apache.kafka.common.config.provider.DirectoryConfigProvider
+
+    kafka.consumer.config.providers.strimzidir.param.allowed.paths=/opt/strimzi
+
+
+    ##########
+
+    # HTTP configuration
+
+    ##########
+
+    http.host=0.0.0.0
+
+    http.port=8080
+
+    http.cors.enabled=false
+
+    http.consumer.enabled=true
+
+    http.timeoutSeconds=-1
+
+    http.producer.enabled=true
+
+    ##########
+
+    # Kafka Security protocol
+
+    ##########
+
+    kafka.security.protocol=SASL_PLAINTEXT
+
+    '
+  log4j2.properties: 'name=BridgeConfig
+
+
+    appender.console.type=Console
+
+    appender.console.name=STDOUT
+
+
+    appender.console.layout.type = PatternLayout
+
+    appender.console.layout.pattern = [%d] %-5p <%-12.12c{1}:%L> [%-12.12t] %m%n
+
+
+    # Alternate JSONLayout pattern config
+
+    #appender.console.layout.type=JSONLayout
+
+    #appender.console.layout.compact=true
+
+    #appender.console.layout.eventEol=true
+
+    #appender.console.layout.complete=true
+
+    #appender.console.layout.properties=false
+
+    #appender.console.layout.propertiesAsList=false
+
+    #appender.console.layout.locationInfo=true
+
+    #appender.console.layout.includeStacktrace=true
+
+    #appender.console.layout.stacktraceAsString=true
+
+    #appender.console.layout.includeNullDelimiter=false
+
+    #appender.console.layout.objectMessageAsJsonObject=true
+
+
+    rootLogger.level=INFO
+
+    rootLogger.appenderRefs=console
+
+    rootLogger.appenderRef.console.ref=STDOUT
+
+    rootLogger.additivity=false
+
+
+    logger.bridge.name=io.strimzi.kafka.bridge
+
+    logger.bridge.level=INFO
+
+    logger.bridge.appenderRefs=console
+
+    logger.bridge.appenderRef.console.ref=STDOUT
+
+    logger.bridge.additivity=false
+
+
+    logger.healthy.name=http.openapi.operation.healthy
+
+    logger.healthy.level=WARN
+
+    logger.ready.name=http.openapi.operation.ready
+
+    logger.ready.level=WARN
+
+
+    monitorInterval=30
+
+    '
+kind: ConfigMap
+metadata:
+  labels:
+    app: strimzi-kafka
+    app.kubernetes.io/instance: onap-strimzi-kafka
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka-bridge
+    app.kubernetes.io/part-of: strimzi-onap-strimzi-kafka
+    helm.sh/chart: strimzi-kafka-bridge-13.0.3
+    strimzi.io/cluster: onap-strimzi-kafka
+    strimzi.io/component-type: kafka-bridge
+    strimzi.io/kind: KafkaBridge
+    strimzi.io/name: onap-strimzi-kafka-bridge
+    version: 13.0.3
+  name: onap-strimzi-kafka-bridge-config
+  namespace: onap
+---
+apiVersion: v1
+data:
+  log4j2.properties: 'name=BridgeConfig
+
+
+    appender.console.type=Console
+
+    appender.console.name=STDOUT
+
+
+    appender.console.layout.type = PatternLayout
+
+    appender.console.layout.pattern = [%d] %-5p <%-12.12c{1}:%L> [%-12.12t] %m%n
+
+
+    # Alternate JSONLayout pattern config
+
+    #appender.console.layout.type=JSONLayout
+
+    #appender.console.layout.compact=true
+
+    #appender.console.layout.eventEol=true
+
+    #appender.console.layout.complete=true
+
+    #appender.console.layout.properties=false
+
+    #appender.console.layout.propertiesAsList=false
+
+    #appender.console.layout.locationInfo=true
+
+    #appender.console.layout.includeStacktrace=true
+
+    #appender.console.layout.stacktraceAsString=true
+
+    #appender.console.layout.includeNullDelimiter=false
+
+    #appender.console.layout.objectMessageAsJsonObject=true
+
+
+    rootLogger.level=INFO
+
+    rootLogger.appenderRefs=console
+
+    rootLogger.appenderRef.console.ref=STDOUT
+
+    rootLogger.additivity=false
+
+
+    logger.bridge.name=io.strimzi.kafka.bridge
+
+    logger.bridge.level=INFO
+
+    logger.bridge.appenderRefs=console
+
+    logger.bridge.appenderRef.console.ref=STDOUT
+
+    logger.bridge.additivity=false
+
+
+    logger.healthy.name=http.openapi.operation.healthy
+
+    logger.healthy.level=WARN
+
+    logger.ready.name=http.openapi.operation.ready
+
+    logger.ready.level=WARN
+
+
+    monitorInterval=30
+
+    '
+kind: ConfigMap
+metadata:
+  labels:
+    app: strimzi-kafka
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: strimzi-kafka
+    helm.sh/chart: strimzi-kafka-bridge-13.0.3
+    version: 13.0.3
+  name: onap-strimzi-kafka-kb-logging-cm
+  namespace: onap
+---
+apiVersion: v1
+data:
+  cluster.id: Tqk3lMtqS_yj3YqVbFjHag
+  listeners.config: PLAIN_9092 TLS_9093 EXTERNAL_9094
+  log4j.properties: '# Do not change this generated file. Logging can be configured
+    in the corresponding Kubernetes resource.
+
+    log4j.appender.CONSOLE=org.apache.log4j.ConsoleAppender
+
+    log4j.appender.CONSOLE.layout=org.apache.log4j.PatternLayout
+
+    log4j.appender.CONSOLE.layout.ConversionPattern=%d{ISO8601} %p %m (%c) [%t]%n
+
+    kafka.root.logger.level=INFO
+
+    log4j.rootLogger=${kafka.root.logger.level}, CONSOLE
+
+    log4j.logger.org.apache.zookeeper=INFO
+
+    log4j.logger.kafka=INFO
+
+    log4j.logger.org.apache.kafka=INFO
+
+    log4j.logger.kafka.request.logger=WARN, CONSOLE
+
+    log4j.logger.kafka.network.Processor=OFF
+
+    log4j.logger.kafka.server.KafkaApis=OFF
+
+    log4j.logger.kafka.network.RequestChannel$=WARN
+
+    log4j.logger.kafka.controller=TRACE
+
+    log4j.logger.org.apache.kafka.controller=INFO
+
+    log4j.logger.kafka.log.LogCleaner=INFO
+
+    log4j.logger.state.change.logger=INFO
+
+    log4j.logger.kafka.authorizer.logger=INFO
+
+    '
+  metadata.version: '3.9'
+  server.config: '##############################
+
+    ##############################
+
+    # This file is automatically generated by the Strimzi Cluster Operator
+
+    # Any changes to this file will be ignored and overwritten!
+
+    ##############################
+
+    ##############################
+
+
+    ##########
+
+    # Node ID
+
+    ##########
+
+    node.id=0
+
+
+    ##########
+
+    # KRaft configuration
+
+    ##########
+
+    process.roles=broker
+
+    controller.listener.names=CONTROLPLANE-9090
+
+    controller.quorum.voters=1@onap-strimzi-onap-strimzi-controller-1.onap-strimzi-kafka-brokers.onap.svc.cluster.local:9090
+
+
+    ##########
+
+    # KRaft metadata log dir configuration
+
+    ##########
+
+    metadata.log.dir=/var/lib/kafka/data-0/kafka-log0
+
+
+    ##########
+
+    # Kafka message logs configuration
+
+    ##########
+
+    log.dirs=/var/lib/kafka/data-0/kafka-log0
+
+
+    ##########
+
+    # Control Plane listener
+
+    ##########
+
+    listener.name.controlplane-9090.ssl.keystore.location=/tmp/kafka/cluster.keystore.p12
+
+    listener.name.controlplane-9090.ssl.keystore.password=${strimzienv:CERTS_STORE_PASSWORD}
+
+    listener.name.controlplane-9090.ssl.keystore.type=PKCS12
+
+    listener.name.controlplane-9090.ssl.truststore.location=/tmp/kafka/cluster.truststore.p12
+
+    listener.name.controlplane-9090.ssl.truststore.password=${strimzienv:CERTS_STORE_PASSWORD}
+
+    listener.name.controlplane-9090.ssl.truststore.type=PKCS12
+
+    listener.name.controlplane-9090.ssl.client.auth=required
+
+
+    ##########
+
+    # Replication listener
+
+    ##########
+
+    listener.name.replication-9091.ssl.keystore.location=/tmp/kafka/cluster.keystore.p12
+
+    listener.name.replication-9091.ssl.keystore.password=${strimzienv:CERTS_STORE_PASSWORD}
+
+    listener.name.replication-9091.ssl.keystore.type=PKCS12
+
+    listener.name.replication-9091.ssl.truststore.location=/tmp/kafka/cluster.truststore.p12
+
+    listener.name.replication-9091.ssl.truststore.password=${strimzienv:CERTS_STORE_PASSWORD}
+
+    listener.name.replication-9091.ssl.truststore.type=PKCS12
+
+    listener.name.replication-9091.ssl.client.auth=required
+
+
+    ##########
+
+    # Listener configuration: PLAIN-9092
+
+    ##########
+
+    listener.name.plain-9092.scram-sha-512.sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule
+    required ;
+
+    listener.name.plain-9092.sasl.enabled.mechanisms=SCRAM-SHA-512
+
+
+
+    ##########
+
+    # Listener configuration: TLS-9093
+
+    ##########
+
+    listener.name.tls-9093.ssl.client.auth=required
+
+    listener.name.tls-9093.ssl.truststore.location=/tmp/kafka/clients.truststore.p12
+
+    listener.name.tls-9093.ssl.truststore.password=${strimzienv:CERTS_STORE_PASSWORD}
+
+    listener.name.tls-9093.ssl.truststore.type=PKCS12
+
+
+    listener.name.tls-9093.ssl.keystore.location=/tmp/kafka/cluster.keystore.p12
+
+    listener.name.tls-9093.ssl.keystore.password=${strimzienv:CERTS_STORE_PASSWORD}
+
+    listener.name.tls-9093.ssl.keystore.type=PKCS12
+
+
+
+    ##########
+
+    # Listener configuration: EXTERNAL-9094
+
+    ##########
+
+    listener.name.external-9094.ssl.client.auth=required
+
+    listener.name.external-9094.ssl.truststore.location=/tmp/kafka/clients.truststore.p12
+
+    listener.name.external-9094.ssl.truststore.password=${strimzienv:CERTS_STORE_PASSWORD}
+
+    listener.name.external-9094.ssl.truststore.type=PKCS12
+
+
+    listener.name.external-9094.ssl.keystore.location=/tmp/kafka/cluster.keystore.p12
+
+    listener.name.external-9094.ssl.keystore.password=${strimzienv:CERTS_STORE_PASSWORD}
+
+    listener.name.external-9094.ssl.keystore.type=PKCS12
+
+
+
+    ##########
+
+    # Common listener configuration
+
+    ##########
+
+    listener.security.protocol.map=CONTROLPLANE-9090:SSL,REPLICATION-9091:SSL,PLAIN-9092:SASL_PLAINTEXT,TLS-9093:SSL,EXTERNAL-9094:SSL
+
+    listeners=REPLICATION-9091://0.0.0.0:9091,PLAIN-9092://0.0.0.0:9092,TLS-9093://0.0.0.0:9093,EXTERNAL-9094://0.0.0.0:9094
+
+    inter.broker.listener.name=REPLICATION-9091
+
+    advertised.listeners=REPLICATION-9091://onap-strimzi-onap-strimzi-broker-0.onap-strimzi-kafka-brokers.onap.svc:9091,PLAIN-9092://onap-strimzi-onap-strimzi-broker-0.onap-strimzi-kafka-brokers.onap.svc:9092,TLS-9093://onap-strimzi-onap-strimzi-broker-0.onap-strimzi-kafka-brokers.onap.svc:9093,EXTERNAL-9094://kafka-api.simpledemo.onap.org:9000
+
+    sasl.enabled.mechanisms=
+
+    ssl.endpoint.identification.algorithm=HTTPS
+
+
+    ##########
+
+    # Authorization
+
+    ##########
+
+    authorizer.class.name=org.apache.kafka.metadata.authorizer.StandardAuthorizer
+
+    super.users=User:CN=onap-strimzi-kafka,O=io.strimzi;User:CN=onap-strimzi-entity-topic-operator,O=io.strimzi;User:CN=onap-strimzi-entity-user-operator,O=io.strimzi;User:CN=onap-strimzi-kafka-exporter,O=io.strimzi;User:CN=onap-strimzi-cruise-control,O=io.strimzi;User:CN=cluster-operator,O=io.strimzi;User:strimzi-kafka-admin
+
+
+    ##########
+
+    # Config providers
+
+    ##########
+
+    # Configuration providers configured by Strimzi
+
+    config.providers=strimzienv,strimzifile,strimzidir
+
+    config.providers.strimzienv.class=org.apache.kafka.common.config.provider.EnvVarConfigProvider
+
+    config.providers.strimzienv.param.allowlist.pattern=.*
+
+    config.providers.strimzifile.class=org.apache.kafka.common.config.provider.FileConfigProvider
+
+    config.providers.strimzifile.param.allowed.paths=/opt/kafka
+
+    config.providers.strimzidir.class=org.apache.kafka.common.config.provider.DirectoryConfigProvider
+
+    config.providers.strimzidir.param.allowed.paths=/opt/kafka
+
+
+    ##########
+
+    # User provided configuration
+
+    ##########
+
+    auto.create.topics.enable=true
+
+    default.replication.factor=1
+
+    inter.broker.protocol.version=3.9.0
+
+    log.message.format.version=3.9.0
+
+    min.insync.replicas=1
+
+    num.partitions=2
+
+    offsets.topic.replication.factor=1
+
+    transaction.state.log.min.isr=1
+
+    transaction.state.log.replication.factor=1'
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: kafka
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+    strimzi.io/pod-name: onap-strimzi-onap-strimzi-broker-0
+    strimzi.io/pool-name: onap-strimzi-broker
+  name: onap-strimzi-onap-strimzi-broker-0
+  namespace: onap
+---
+apiVersion: v1
+data:
+  cluster.id: Tqk3lMtqS_yj3YqVbFjHag
+  listeners.config: ''
+  log4j.properties: '# Do not change this generated file. Logging can be configured
+    in the corresponding Kubernetes resource.
+
+    log4j.appender.CONSOLE=org.apache.log4j.ConsoleAppender
+
+    log4j.appender.CONSOLE.layout=org.apache.log4j.PatternLayout
+
+    log4j.appender.CONSOLE.layout.ConversionPattern=%d{ISO8601} %p %m (%c) [%t]%n
+
+    kafka.root.logger.level=INFO
+
+    log4j.rootLogger=${kafka.root.logger.level}, CONSOLE
+
+    log4j.logger.org.apache.zookeeper=INFO
+
+    log4j.logger.kafka=INFO
+
+    log4j.logger.org.apache.kafka=INFO
+
+    log4j.logger.kafka.request.logger=WARN, CONSOLE
+
+    log4j.logger.kafka.network.Processor=OFF
+
+    log4j.logger.kafka.server.KafkaApis=OFF
+
+    log4j.logger.kafka.network.RequestChannel$=WARN
+
+    log4j.logger.kafka.controller=TRACE
+
+    log4j.logger.org.apache.kafka.controller=INFO
+
+    log4j.logger.kafka.log.LogCleaner=INFO
+
+    log4j.logger.state.change.logger=INFO
+
+    log4j.logger.kafka.authorizer.logger=INFO
+
+    '
+  metadata.version: '3.9'
+  server.config: '##############################
+
+    ##############################
+
+    # This file is automatically generated by the Strimzi Cluster Operator
+
+    # Any changes to this file will be ignored and overwritten!
+
+    ##############################
+
+    ##############################
+
+
+    ##########
+
+    # Node ID
+
+    ##########
+
+    node.id=1
+
+
+    ##########
+
+    # KRaft configuration
+
+    ##########
+
+    process.roles=controller
+
+    controller.listener.names=CONTROLPLANE-9090
+
+    controller.quorum.voters=1@onap-strimzi-onap-strimzi-controller-1.onap-strimzi-kafka-brokers.onap.svc.cluster.local:9090
+
+
+    ##########
+
+    # KRaft metadata log dir configuration
+
+    ##########
+
+    metadata.log.dir=/var/lib/kafka/data-0/kafka-log1
+
+
+    ##########
+
+    # Kafka message logs configuration
+
+    ##########
+
+    log.dirs=/var/lib/kafka/data-0/kafka-log1
+
+
+    ##########
+
+    # Control Plane listener
+
+    ##########
+
+    listener.name.controlplane-9090.ssl.keystore.location=/tmp/kafka/cluster.keystore.p12
+
+    listener.name.controlplane-9090.ssl.keystore.password=${strimzienv:CERTS_STORE_PASSWORD}
+
+    listener.name.controlplane-9090.ssl.keystore.type=PKCS12
+
+    listener.name.controlplane-9090.ssl.truststore.location=/tmp/kafka/cluster.truststore.p12
+
+    listener.name.controlplane-9090.ssl.truststore.password=${strimzienv:CERTS_STORE_PASSWORD}
+
+    listener.name.controlplane-9090.ssl.truststore.type=PKCS12
+
+    listener.name.controlplane-9090.ssl.client.auth=required
+
+
+    ##########
+
+    # Common listener configuration
+
+    ##########
+
+    listener.security.protocol.map=CONTROLPLANE-9090:SSL
+
+    listeners=CONTROLPLANE-9090://0.0.0.0:9090
+
+    advertised.listeners=CONTROLPLANE-9090://onap-strimzi-onap-strimzi-controller-1.onap-strimzi-kafka-brokers.onap.svc:9090
+
+    sasl.enabled.mechanisms=
+
+    ssl.endpoint.identification.algorithm=HTTPS
+
+
+    ##########
+
+    # Authorization
+
+    ##########
+
+    authorizer.class.name=org.apache.kafka.metadata.authorizer.StandardAuthorizer
+
+    super.users=User:CN=onap-strimzi-kafka,O=io.strimzi;User:CN=onap-strimzi-entity-topic-operator,O=io.strimzi;User:CN=onap-strimzi-entity-user-operator,O=io.strimzi;User:CN=onap-strimzi-kafka-exporter,O=io.strimzi;User:CN=onap-strimzi-cruise-control,O=io.strimzi;User:CN=cluster-operator,O=io.strimzi;User:strimzi-kafka-admin
+
+
+    ##########
+
+    # Config providers
+
+    ##########
+
+    # Configuration providers configured by Strimzi
+
+    config.providers=strimzienv
+
+    config.providers.strimzienv.class=org.apache.kafka.common.config.provider.EnvVarConfigProvider
+
+    config.providers.strimzienv.param.allowlist.pattern=.*
+
+
+    ##########
+
+    # User provided configuration
+
+    ##########
+
+    auto.create.topics.enable=true
+
+    default.replication.factor=1
+
+    inter.broker.protocol.version=3.9.0
+
+    log.message.format.version=3.9.0
+
+    min.insync.replicas=1
+
+    num.partitions=2
+
+    offsets.topic.replication.factor=1
+
+    transaction.state.log.min.isr=1
+
+    transaction.state.log.replication.factor=1'
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: kafka
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+    strimzi.io/pod-name: onap-strimzi-onap-strimzi-controller-1
+    strimzi.io/pool-name: onap-strimzi-controller
+  name: onap-strimzi-onap-strimzi-controller-1
+  namespace: onap
+---
+apiVersion: v1
+data:
+  password: VUxvNFk4Z05hb0V1ejZ5ZWdZOEpPalN1S3RDZVlhbzA=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0ib25hcC1wb2xpY3kta2Fma2EtdXNlciIgcGFzc3dvcmQ9IlVMbzRZOGdOYW9FdXo2eWVnWThKT2pTdUt0Q2VZYW8wIjs=
+kind: Secret
+metadata:
+  labels:
+    app: policy
+    app.kubernetes.io/instance: onap-policy-kafka-user
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-onap-policy-kafka-user
+    helm.sh/chart: policy-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 17.0.0
+  name: onap-policy-kafka-user
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  ca.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUpRUUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQ1Nzd2dna25BZ0VBQW9JQ0FRQ3VTalNGay9uU0RGT0EKMzN5dmVNT3dML0Q4Rlc5NnBscEhIajhod2plYnhWVUJHeDJrbmVsaS80dFMvTTdBbytUOEFDQTAzMmRrNmF5WgpXL3Z1TFgwd2pzZVZ2bjNvRlFwZ1FVb0hVMzZNOXdVS2htZ1lOT3dxOWRGaWNSZUU2NHBzRUcrVDBsTkdmNk91ClpoMVZLdm5VbFVNVXQ5YldoMDZvTTFkeUhXMTNDMzFMNjZ0bVh2ZXZmVTZzV0VsMEZQeTNmSjVYNHZ6TGVLVmYKUTVoaHhySTh2M2xsamtHbThrYTZDUkRNM2ZOZUljYXl3MXgxV0RBMnhkWnNnSzBqaVVOcmdXU08vNjVDSDVtVQpJaXc3RFhFaUhkTWxjbUlIazJHamtiMjY2cG1lSHUxTWF2Y3pvZUVYQWtRZWJyazFUYjZrYlNyYStSZjFYbXZrCnk3VTlaYXRUZGRrVHRJOFFRRjhXbm5WUGlSNjljc3VQOHVjS0RhSnVJTWhodGZpMHdCdGZhT2craklLVGtwZ0YKUHcxQUluQ1BwTi9OSm96UjMxSmNQU00wUjlhak0xZXFlcUx2bVZzTlhDSmZpT3FZWEhrWDZwL1FNdWUvRnE2agpzelNmZk9FeDloZUJMMDdjNVdKMjZka1lyS0Fuc1pQNnN6ekprbWpUaXEyck9vTEF1V3RFU09SbGdYNXloNnZLCjNkeXh0dmxqUGhaUjhQNDRTbW5JdGV6YjB4SUNYalNkMkxIdThIN1F5TXJMKzhMdXZwYXpBeDJUZWlucFU5bnMKL0NBbVc3eU9NM2JoTGEvSXZTSkh1ZlpjTFJLNS9MVGtIc01HenBGdHVnVEdRcXgvc2U1V3BHeFNEVGZ3QWQ2agpVTnh1S05YQVM4Slo5bUJ1cmx1cFNzRThwZ2hDUFFJREFRQUJBb0lDQUF4TU81citSemNaUEE0Z2x0TnB6Y01CCml2czZodmhzUXZ2NEtDTzVhTU9TdjYzNWpCU291TVpOdWphemxHSVczbW9pbHlNcjdVZDdUbnl1dHg3RjhtcXAKOUc2K04zT1lBbmlxdXE2OEp6YUttbjQwNENUdkhRZmwrdTE3aGRtUTVoNDhaYWNVUk9CNVVxTVVYUGI4dG82WApycGxJWkg0VUk0cHVQdm9VRmZ4N29NNXAxVmoray9MN3dFQ2NaU2h0NzZ3QnZNbCtRSENaOVc4OG5ZU3VxTFp0CkcwTjliMmY0ZWVHWUVLbW44b3Rlamo3Z1ZvYUlIN1RKcmxqUEZvaG1uODEyM3BIUmZDbjV3VlFvdWg2N2t0TkIKci91Wkw4NFJpZWJvK201MUxid3d1ZlUxcWZZb2NyRzFMUG5KdmNORFZsT1RTVjRVaStwNkRGcGpQa2xVQW12ZQpHYW5BVmNPMWVtazJwWVNmZnppdHhMeXBHVHNidnoxa0k1M0k4OGE0eFpZMzhCMG9XWUV5Y2hUaHpBaDVWcHNYCmxMR3FEcnlwTG9oZmZ3WHc1Y29UcUpjbXJ3dnkvWE02dGJna1c0M2pqbkFFMXU4bjJIdGxKNnIySDR3aEZVbC8KRG9IU2xTL1J2bk9wWlYvRVZTUzBPWWFFNzhRbklyWSt5bnRrMXlDUGpSTnJyUlZNNEV2eUpZUDRxbFZ0ZFNwaQp3eENzSU1IQnVzWS90dXYrU3kyWFMvMXdSSytQM1J3eHZNTHFwS2g1eDVYd09ZaGY5YTIyd0NGbWg4QVU1Sml4ClhEVkJ3THhnazNGU0w5MmhPRE9UVnpOZTRTNSs2ZlMvUjRZc0tZcmViSVRkNmpaSlFrMmVCYTlNM1VZUWI4TFAKMUFKL0hWRmJmNVdoVUUrWkVCL3BBb0lCQVFEV2JHQ09TcCs2cUtzUTZ0dDVGRTRQSmNvRHhTVU50MkNiWVQrNApUeFpsOTlUQkpqTy9veUttaGpuTnJ2dXBZQnk4dHp4Yk9zMldpaE9DZnBsMTZBeVlqNm1lb0RxQ0JiWlpxK0tSCk45dXJpelFGajNYY0hySk9sdUFsL1V5bWpRM3FuYTFjNzJXTnIyOE90NHArY0xFQktEZ3BGM3BPQzZyREpsUWwKSEVzR2tCOTNlcEVzaGIyWHRlNUZTQi9iaXhadWNrWWlpQlE3L3ZuSmtSbStzVjVYWjJSZC9IcURxNnViNW5QOQpRcit2empuZzgzR0xnWFBEZTFDRldYT2owbGtaRDdkdms1cmI5cUpBWHMxNGhSRmJtK2ZjSEowM3NKOXNiRUZFCkpGdVRZZmwrbVBBZXdyTG1aOVVqa2YvVGx3NXZBTU5jb1JCLyszdTZuRm4wNkNSSkFvSUJBUURRRmFyeFFrcTUKdDR0ZU9QMVQ2RVNmdTJVemQ0YUhTK0pjVDYyVUFRWGNBc3ZvOExFYXo2a3J4aGxYYjhZbDAxbEhUcGt4NzZ1OQpiZ0NRdHBtd2hlckw5YXdkZ1RaVDZyN0puRkpBdUxCQnNUbVhVQm0rNVl3VE9pWm91Q1dkVEY5QzU3ejdER084CktjKytMUGJsbVdFM2RiS0s1NnkvbHZLL1lNeVU5bzNvcjdjWC8yTDc0S1lUaEloWFo0UGdXazlPYXk1TWs0UVEKMHR2MkZCdy82SzVvYytwUVNEWG9IZFpBK2ZRUzg4VUV1MWM0enYxMnpNc3V3QkNQUExGRlovQ1kzWVJYaXFoSwpxMmp1WitOMURQR0Z6YktPdGxYZ05LQlhTK2RLUUxsN3ZXSVhvcUJyeWU3WjdheUFVNy9UV2dCWU1TS2RJb0dHCmFtbWJZcSsyUm9aVkFvSUJBR1RQZDJYdXQ4SXVZcDhGakVJVXhjNWhXZVVEM3pQZnIwL2VIUE11VzcxOUUwM3MKQkJCcFJuVThUaGpoMS9mOTlBVFZzVTdEQ3Ixb0ZWd1k0VldKejhJNmFPam5OQnJGVE1KRUNiVjBxWmF4VDdmOQpodEFDcnBvOFhRMy9WUFpKQXUzM1MvYVJweEZDRmRpNWVpZVFHK2dMWEx3VkNhOS8xTDBEWERSR1pRK2sydVoxCmZhT05EV0l5YXQrdjFTcUc3ZmpuU1FvYktFZzh6SHR6K01LcTZVdjJsRDJMNHAzZExFV1R4NXllc1RpYW9LT2UKVVJmaHVPZURKb3hMVGc4TGFsQmFEMGdxQVhqQkwrOUxveGF5bVVLVXZpSENZamc0bGZ1SHVmZXJrRkp1a2JwdgpkUlZCUEpNTzVpcGZEZ1FRMVB4alEzWmRVMENZbjhkUWt3cU55ZUVDZ2dFQVdoQm0wdEhNb2lHdGN2VGJ3UXVSCldFbTEvZGJJSlp0VXVIdk1OM2xSM2U1Zjc4enQreHJTc0Iyb0xrNDB4MzU0OEFJM0VJUWFJMzJQUlJPajVlR3cKeE9McXdrS0JEMFZWbXRITVVETWdKdTdjYkgvQkJQMDU2Y0NMaTF2WS9BSm9ZUDhJcnVpbjZuTjJkV3ZrMlcvUAp3ajl4TGVva3ZUQktsVWNDaFo5SndPTDlMcWZkWWdQVUhqS0pDTHZIT3I0Y0FXY212UUpFY1R1eTlRbXpTSDRmCnJ4b3MydDdHWmxjenV4LzA0cGNjT1hZVXhJUGk5UjZpK3ZNcXQ3U2ZUZGsxTEJVRkNSYjh6SVR3ZisvN1pWaGEKMlgwMHdjeHQwd00wTzFTaElXUnVZLzZPakloWlF3NCtFWmxyeG9kNVNiTjAzcmMxc2ltVFFtaWdtUjdYeXQ4dgptUUtDQVFBNjJZNDZyZmtvTDlrMzVsSjRELzdDNzdEK2l2SDJ4bGhJZnozY3F3RDljS3NFb25CcGZ1MGpZRlJaCjR5cHc3U2wwZDlDSGVtMjBpN0g3Q0JDNDhTczlDZnZuUXR0U1B0ZHoyTkRsQ1pZU0t1R25ncmZOVWpKVS92SDQKUTdRSHNGS00ybm5Oa3ZYekkrWDNwRzV2OElDbGFmcjBzV20wWEwvMGtlQkhhbWhYSkg2Z0VySkpuQmQvNC9oQQphV3JMNmhMUkZXWkkza2swQWxKR3pmbXlNUGptTElzWG5FeS8wdFJoL1pzMVM1TjhjRURBSnNOZkV0dTU3OEU2CnV2cExHNEJ4UFppQWFtbVRFUWdEWjJsVC9sNzIvZFBjY25MT1MzWnplRXUxY3QwSFpKV3ZmQ0tWbitGVFdWa0kKcFE2ZzdDNUFCaWV0YWhWelVITUJXSDhjUUIzOAotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg==
+kind: Secret
+metadata:
+  annotations:
+    strimzi.io/ca-key-generation: '0'
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: certificate-authority
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: certificate-authority
+    strimzi.io/kind: Kafka
+    strimzi.io/name: strimzi
+  name: onap-strimzi-clients-ca
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZMVENDQXhXZ0F3SUJBZ0lVWHRpakI2YjdjMWRmTlV3a3ZzNm5iclhmN0JNd0RRWUpLb1pJaHZjTkFRRU4KQlFBd0xURVRNQkVHQTFVRUNnd0thVzh1YzNSeWFXMTZhVEVXTUJRR0ExVUVBd3dOWTJ4cFpXNTBjeTFqWVNCMgpNREFlRncweU5qQXhNak13T0RJNE16WmFGdzB5TnpBeE1qTXdPREk0TXpaYU1DMHhFekFSQmdOVkJBb01DbWx2CkxuTjBjbWx0ZW1reEZqQVVCZ05WQkFNTURXTnNhV1Z1ZEhNdFkyRWdkakF3Z2dJaU1BMEdDU3FHU0liM0RRRUIKQVFVQUE0SUNEd0F3Z2dJS0FvSUNBUUN1U2pTRmsvblNERk9BMzN5dmVNT3dML0Q4Rlc5NnBscEhIajhod2plYgp4VlVCR3gya25lbGkvNHRTL003QW8rVDhBQ0EwMzJkazZheVpXL3Z1TFgwd2pzZVZ2bjNvRlFwZ1FVb0hVMzZNCjl3VUtobWdZTk93cTlkRmljUmVFNjRwc0VHK1QwbE5HZjZPdVpoMVZLdm5VbFVNVXQ5YldoMDZvTTFkeUhXMTMKQzMxTDY2dG1YdmV2ZlU2c1dFbDBGUHkzZko1WDR2ekxlS1ZmUTVoaHhySTh2M2xsamtHbThrYTZDUkRNM2ZOZQpJY2F5dzF4MVdEQTJ4ZFpzZ0swamlVTnJnV1NPLzY1Q0g1bVVJaXc3RFhFaUhkTWxjbUlIazJHamtiMjY2cG1lCkh1MU1hdmN6b2VFWEFrUWVicmsxVGI2a2JTcmErUmYxWG12a3k3VTlaYXRUZGRrVHRJOFFRRjhXbm5WUGlSNjkKY3N1UDh1Y0tEYUp1SU1oaHRmaTB3QnRmYU9nK2pJS1RrcGdGUHcxQUluQ1BwTi9OSm96UjMxSmNQU00wUjlhagpNMWVxZXFMdm1Wc05YQ0pmaU9xWVhIa1g2cC9RTXVlL0ZxNmpzelNmZk9FeDloZUJMMDdjNVdKMjZka1lyS0FuCnNaUDZzenpKa21qVGlxMnJPb0xBdVd0RVNPUmxnWDV5aDZ2SzNkeXh0dmxqUGhaUjhQNDRTbW5JdGV6YjB4SUMKWGpTZDJMSHU4SDdReU1yTCs4THV2cGF6QXgyVGVpbnBVOW5zL0NBbVc3eU9NM2JoTGEvSXZTSkh1ZlpjTFJLNQovTFRrSHNNR3pwRnR1Z1RHUXF4L3NlNVdwR3hTRFRmd0FkNmpVTnh1S05YQVM4Slo5bUJ1cmx1cFNzRThwZ2hDClBRSURBUUFCbzBVd1F6QWRCZ05WSFE0RUZnUVUyTTlJSzF6NFpjZHZkMlhKdUZuYktvRkp4S1l3RWdZRFZSMFQKQVFIL0JBZ3dCZ0VCL3dJQkFEQU9CZ05WSFE4QkFmOEVCQU1DQVFZd0RRWUpLb1pJaHZjTkFRRU5CUUFEZ2dJQgpBQnRKeHRaTmR5SnRtV3FVNXZvSVZIeUxaSmVMcWwweUJ5YnVSako1WE1ROW1UdmpVOHVMRUcwbFhrTG9YcWNBClAyTGhsZUlLRlhhL3JJVjlQRjNMdDIzVW1VZndyOGxmWTBzdnM4elNGVERtZ2hFQ1d2YU51MENrMFJHMi9adHAKS0RveVh2SittNDNDbGFWT3dOZzJ5TmZVRENkVk5ZeW95MTRuUU1WVExwejlVcXlsMTNzcEdpTzB5bmFPMHc1Uwptc0YxZHc0TXlNWHE5Y1JaWkUzUy9iS3dSb3BCMnNPdmhITCtydVJUUE5nOURiekdvR2w2Mm9GclF4aXkzTjBWCjQwNHFOVk1RVkF3WVI3OFlNN0xJYXU4TzYvcjQ3L2UwTjBMNStLSHluMnhaSDdibDJnak9uNjV6VkE4KzZPeTEKTmNxSHB6NmgzSkpOa2pPUEtTbDh4SEhrdFgvYkhtMzJJMzcvMUl5c1MyY3ltYlUveWFBeklsN3p5aWxla2I0VgpvcUY0b2ZyTktmbWZFQ0oxajhvK0VadmRRUkV5d3QvU0ZuU2k5VWxZVm1CL0Y3TlRRLzZJVjgwWTV0K2FHZnZ4CjI0bDBtZE5icnAzWXp4QzBKZi9VdHhzRUJ3VGZMdnRSWFRqNXIwb2wxSkhsTElVMTBZWWY3ekhVM3JTekdMTzEKUlJjeGtmckh2L21ncnQrU1hFa3h3TkNXZnNPZXdEVnE4emlGbmM1aStDY0xXRENabURINFY0UitvTEJONyttMgpEclhoRFVxRjVTRmNtOEpqU3RFTGdkV3VZQVFxM3dTYzI2ODNwU2o4d3AraGU4MzRjMkJwWmZHRXdDQWM5b0I4CmQ5a0VibTR3WDF3dUdNd2IvLzJseXFFUFBRMlNtM3pRaVlFYk9sZS9TVklvCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  ca.p12: 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
+  ca.password: V242UzQxZkNlakxo
+kind: Secret
+metadata:
+  annotations:
+    strimzi.io/ca-cert-generation: '0'
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: certificate-authority
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: certificate-authority
+    strimzi.io/kind: Kafka
+    strimzi.io/name: strimzi
+  name: onap-strimzi-clients-ca-cert
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  ca.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUpSQUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQ1M0d2dna3FBZ0VBQW9JQ0FRQ1ptb0dEd1RmZmFRZHoKUi9DbFN2ODdlWUlmUWlBMUpESDlBZHJCTWtNY1Jqa0oyMEV3OWdaUVNCS3RDVnQ4cXFFa0tYWmxZVS9Gc25udgpHQmt4a25UcVFqWXhHRzZhREVSRnVBdUJ1UkRLV2ttMERGRFJzTnM1RTQybkFNRXYxRmZDeGM1THdhVkJkVTBMCitoK1JWeklrSnFBeGl6UVJZckY3VmVMb3ZRaEdXWSs0SU5NOUlJQVhLQUlmTVd4QmwvZFBHK0VDN013VlQ5TEYKd1lBWEpCTm1WaVBDRWp0VHVONmFaV0hLOG85bGR1S3lUQnVUTTg2SHVPVlF4KzdxVFZIbFdmSVRYTUV5OVdlVwpLTncxT2NOekxsVldQeVhMdVdsZlJuS2FWY2xVc2NkY01saHB4dU0vcVU4Ujd5YjEzbEd3NGU3bXQrWlJWWlovCnROMDZpRUg2aTdYc3ZrMHgzYk54cldrUXdFM2g2OWU4QlN1WnlETjUrYmJzSmt4Rm9WdnJoS2ZVM2JJcnVGeE8KajZTRmtsRGl6cGtSQ3FncmpVL2JFRGRDdkY1b3hmNVhGNkV2dnE0YzlDck5HWnBRM2lPem1zNThVTEtvYWpHUgorK0x4Rkk3NjYwZDl1LzI5YU8vYWZlRWhSMXlFNlVoc0NvaXdoY0tTYUdQNGRROG1HZUlRWVAwNkxsR3ptbkp2Cjh4NVZpck1uV0FRemZrbmsvTVRTZmVud0ZIdFoxb1IxYW5oMUNIV0Jud2NaUU00NTN0TVY2WldVTXBxOTlBeCsKTVFnNHJObHFrQ0xuWW1iUnE2MkYvSFdtb2JIbWN1NXJPRlh3UDVMdUpiZCt4bnBmV3RoejNMMCsvakZSOUhHSApGMHVUbitDQStlNWU0MzNyc01SOHUrcnNLQUN6TndJREFRQUJBb0lDQUFPZjZEOStMejNYNGlPZnhuZDRFaGJLCnNyM2ZGeGg1N3E0TVBhZkNjbC8zN2orankyR0c1TFkvUlNXTkszb0JJc1ZTTHllTVNOQWUrbzZnVUhQaGcxM0YKeXphVVg0UEdGMVJYMS9tckx0Qy9tYTZrZmNHOC9TZFhKVWdVRmZyMWRVNjAwVDNyWjJWb2liVm5KUmlPYUxIKwpzVmdKODJRWG9wMkk5TTVPSzZSUlY3bGVHTzMvMXRYMURUdkVORXhGOUVHTEpGK255OWNTNTZQZ0FaQktPeVQyCmttaHhlckhxa21JdFUwWHhQRjRHRktwbGJsOG1ZVkRGbGErMjBCWDZWaHpsNXZiN0FOb2RmV0RIUFE4S2VtaTgKNXFtZTJ0cjRXSnExZEYzYytWL0V4RElTUkJEVzd5VGc3MnM2YS81d1RSZ3g5S3ZBR2pEQUpzbURzSmJCZ1dFSgpUT0VleDdwOFVDOGtJcnFRRWhPTVNaRVcvc1lpY3B3VmJzQm9BT0E0bjMvNXBUbXYybjhCeEEwclJ0RWRZVFkwCjNONHVsdTBnRTRNKzVIU0J1WGJpd2lCT1FlcHVXRnZ6RUtSOENrSGc4VHVqcm0zcG1sR0RDSmVYajZHSnJKL0gKdlk1YUhnN2Y4TnFGUU53V3VWVnQ1TjVjZUhpL2xiMkFVY2ZpUmV2UzVNdmYrSm56d0hPaXlxTytMWkxCajd2egpDQm5sOVBCd2VlWmU3TEF3SDNYait0Uk96eGZGQXYrc3dBV3dndytqS0d2K3JWM3hRMUt2TGhnR2p6cHM1OXRLCnlWMTgyaXQ5YkY2a1JmOGNhYUo4U2duRmJ1bnhSY2FDM3VoTmhuOHNpNGxuWG9FZ3FLZ0plU05LcGtXMC9Hb0cKenFncEZmQ0lFVy8wZzZWQXA2SUJBb0lCQVFEUTJ3cFkxakZxandCb3ptOUpwY1pFVStaYk1KbVhxelFFaGowLwo5dkp5NU54a2ltSkNQa3lndis1TE1IT3FKbG9HRlpiNFMvYUQ3Q0lIWFd4cGEzMlJtaE55RkRvVFhxd3EwVVVLCjhKelBMNkZuYW9oOSsweWQ1ZlFJazN2SStINHRxZlJwMkcwTEdOK1NrRVRlNG5CL0gzbFRQVlR5RFVKYXZUOXQKMVd0NDVadmtOUHRmMGkvbkJpclR3Skk0a3lkS2lVQjI0U2NMY1RjZDBOUXBvVGJ1T0tUUWNoVVJ0eTQzZGVvSwpzQ1Y5SWpIM3BxWEh3SGljRDdiMGpIMVNLL3JodTJ4eEcyQS8wMVVJR21iMWtwMVdVbmRxRVJRN0tZUGZYbE8yCis0RDVqSnptZURZSHhuWld2cVh6QkQvWGsrWldZbnNpRWdMZE0vaEJmQ0dGaG00QkFvSUJBUUM4UnFrdGRNNUoKSnE5S2ExWnRNcmxaWFFsM1dXckI2aGxyL1NWTVFaYk5nZmZYL2NhRlBabGJ6VGc4Z3BKK3Y3LzZGRHJZS0J4ZgpIU2JNejZ4cDlvclRqVGs4dXZKN0YzRGh3RHpmeHNTcFlRLzY3bjFnbjlWb2RlUHlSNzZUcHN6TW41Y2RSYTFsCnYyWFdVQTgycWVUZVVQY2hHVlJ6R1llcHlYT1R6QXZGakt5a2JvbThUaDd1dUwzVDZhYXBNclF4anYyZEZHdEYKbkUxYXlvdEZZQTFRb1M3dkN5bVJlVzZ0T1lzcEZONGg4ejZrVWZ2NFFpY2lEMGk5K1BZdUJPT0lPT3RqUFZEZwowM251aWpKeDBDMDdUK0VGc1U0MG9SSWFhWWNHd1dGNkYzVFF0Vm5oMkJRZjhpY2RrRm9jM2h0NHBIb2FvTngrCkoxRHNEbEs4MFJFM0FvSUJBUUNINVc2WEhVL3NLUDQ0TTlKLzFranEzcml0cnpMUldFbXhnL05Jc3BOUkpROHUKc0VoOUYvSmVTbVJ3TWllZ2wvSE5zYkNaQVR4MjNHZkw2UU1JbVRPTVVQZkVLOXNhRFdqek4xVzRaNVZ3em1vMApVMEphenZBc2NaclhGYmZlcmFuVVpwaXRZbkNaWHViaWc5TDhQOVM1TXE2TDlnVld0ai90c09RYndGbDh3ZElzCnJEakFRWkIvdnlpUXZlV213RUU1bzVMNWgwa1RqZWd5RTFacGZBZTArOUJwL1VFdVZNWFN1bnU5MXAyZURXajcKM2toU2NDOUtSSU5rSGlIUkhPTFNqRlJrU0U3WldOWWtQcUd0dW1kNzZvN2V5aHdpM3NGNnp2S2p4b1JHWERNZgpWeXE0NW03THhLTlFPL3lhZGhiVE1LTTBLUW9LQ3EzSFZsQ3RoQ29CQW9JQkFRQ3g1TVlIQ0QyOWlvckg4MEdYCkxmMUpmWW5yTmhhVUlNQmljNjhoTFR2eTg2R2RlTkJ4cHJGWHQwRXlrMkVkMThucDNlRjN5Zlo4dkV1ajYzbUsKS1lRa3ZXUmVpSG1DYXJTaTZZUGJJTEZESlUzM0dBNXBGTHlNMWc5S0poWGc1eExOS09HY3EvQlptZzM4QUd0UAppQm1USWNkUGcrSnlXcVgvZkRQemF6R1lPQUlMMzlIT2xiWE9jOG9SQjgwTVE3ZFV1RG5UaUs2TytFOXl3THYxCkVmdWl1cGxoRGhmNXQxWW00SjhuY3Vzc0F1eW1VRHlXNXRLWThQNFhXYndwNFQ2bndMaFFiV2dVOWx4WVVrVzEKbWpDU3dUZnByQTByMXlFR3liem1XaVBqTzNTSm0wRFJEdHg5RHMxOHRwOGVkWkpaWEhkdTM1MVdxWWxoY1dzbApzeGpqQW9JQkFRRE1HVUxZUXFzcXBCWEhCSlRtZjNjU2R1bmRYK3NFSDVxT2lMM1N1SG93RW85SHMvTGNuWGpZClhSaTQrQVI4SEhqTlZLWlF3bEhnaGpNdWtkV01aRzNxd2lrSlRmUUVvSmlsN0U0cVRhRktRczQrVEVoaWF0dWIKRmFPNlU5YTFKL2ErQmxIM0d1UyszK21VTDllZjRxOEdUdTZhMWdqMkUrempKNXVxRzFGNE5VVnpubitSKzJZVgpnVm4rL1NOekVjYzMvMFJoN3MwTDZraWhKSW9LQ2JVRTJ0OUw1ZzkwY0xhUEVnRFdUcmFnV3Jwa0J2Sk9BQUtiCnNCcVlpc1pleGorWWZCK01Sb3grbVlqZGE0dmFsam9obURLeGpzRUtSUlNKR2dISDhLRjhmUGxhZVBLbnBBVUcKSW8yL01xR0RXWWh3S3cydUhuRnRqS2gybjAxR05ReXcKLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQo=
+kind: Secret
+metadata:
+  annotations:
+    strimzi.io/ca-key-generation: '0'
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: certificate-authority
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: certificate-authority
+    strimzi.io/kind: Kafka
+    strimzi.io/name: strimzi
+  name: onap-strimzi-cluster-ca
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZMVENDQXhXZ0F3SUJBZ0lVTWYyVkl0NGdHUDZDYlRFQzNDNEVGQTlqb29vd0RRWUpLb1pJaHZjTkFRRU4KQlFBd0xURVRNQkVHQTFVRUNnd0thVzh1YzNSeWFXMTZhVEVXTUJRR0ExVUVBd3dOWTJ4MWMzUmxjaTFqWVNCMgpNREFlRncweU5qQXhNak13T0RJNE16VmFGdzB5TnpBeE1qTXdPREk0TXpWYU1DMHhFekFSQmdOVkJBb01DbWx2CkxuTjBjbWx0ZW1reEZqQVVCZ05WQkFNTURXTnNkWE4wWlhJdFkyRWdkakF3Z2dJaU1BMEdDU3FHU0liM0RRRUIKQVFVQUE0SUNEd0F3Z2dJS0FvSUNBUUNabW9HRHdUZmZhUWR6Ui9DbFN2ODdlWUlmUWlBMUpESDlBZHJCTWtNYwpSamtKMjBFdzlnWlFTQkt0Q1Z0OHFxRWtLWFpsWVUvRnNubnZHQmt4a25UcVFqWXhHRzZhREVSRnVBdUJ1UkRLCldrbTBERkRSc05zNUU0Mm5BTUV2MUZmQ3hjNUx3YVZCZFUwTCtoK1JWeklrSnFBeGl6UVJZckY3VmVMb3ZRaEcKV1krNElOTTlJSUFYS0FJZk1XeEJsL2RQRytFQzdNd1ZUOUxGd1lBWEpCTm1WaVBDRWp0VHVONmFaV0hLOG85bApkdUt5VEJ1VE04Nkh1T1ZReCs3cVRWSGxXZklUWE1FeTlXZVdLTncxT2NOekxsVldQeVhMdVdsZlJuS2FWY2xVCnNjZGNNbGhweHVNL3FVOFI3eWIxM2xHdzRlN210K1pSVlpaL3ROMDZpRUg2aTdYc3ZrMHgzYk54cldrUXdFM2gKNjllOEJTdVp5RE41K2Jic0preEZvVnZyaEtmVTNiSXJ1RnhPajZTRmtsRGl6cGtSQ3FncmpVL2JFRGRDdkY1bwp4ZjVYRjZFdnZxNGM5Q3JOR1pwUTNpT3ptczU4VUxLb2FqR1IrK0x4Rkk3NjYwZDl1LzI5YU8vYWZlRWhSMXlFCjZVaHNDb2l3aGNLU2FHUDRkUThtR2VJUVlQMDZMbEd6bW5Kdjh4NVZpck1uV0FRemZrbmsvTVRTZmVud0ZIdFoKMW9SMWFuaDFDSFdCbndjWlFNNDUzdE1WNlpXVU1wcTk5QXgrTVFnNHJObHFrQ0xuWW1iUnE2MkYvSFdtb2JIbQpjdTVyT0ZYd1A1THVKYmQreG5wZld0aHozTDArL2pGUjlIR0hGMHVUbitDQStlNWU0MzNyc01SOHUrcnNLQUN6Ck53SURBUUFCbzBVd1F6QWRCZ05WSFE0RUZnUVVkZklCVFdqODJDeXVnSjQ1SHVVeEtGRGNBell3RWdZRFZSMFQKQVFIL0JBZ3dCZ0VCL3dJQkFEQU9CZ05WSFE4QkFmOEVCQU1DQVFZd0RRWUpLb1pJaHZjTkFRRU5CUUFEZ2dJQgpBRDkzWVRLN2dQMXdQekZZWnlyUzgvVkdSMGVKSnFsS0J1eEEzbm9qb203bkNBY0xiUnEvaUxZeXh5c05HMFU4CnNYL0FVMW9pMVYvNTkxU2xuRFc3QUhEU052L0dFR3FlK0xkVUdMZGZqUmJLVWNZbld0Q0JCZTFiRk5QUHNhYjIKY3Nqc2VEQmdjYUZmK2srTHBZTWNyMDZYMytiZVc3QUNTU0svTmpKV3JzZGdMSGZ1VHhZSW5pOE5hTDV6aERDRQp3TEwvajhENlZUMGRQVHdQUE9PaGpMb01rbXd5MXpnclJsdzg1SjV3a0JSU011aktMT1JXSEpWZHVudnBnOVZCCmJpRDdMdFVRWHVuMmJuV3JaUGtCUXV0OVJxODlSY2JEMTQwOVVCdithZjVNbDVQZlU5bXRNT3hWeWYvRTlCQzcKcGRtKzR3Z0ljRXg1bjNxdmpqMHU4NmNFWjZaWG1POUNBMmNuaVBJOTRHQVBtaE83TzFQOW84MGVqemtiNGVxdwpLVmNWdTFOdkJCcGpwOEdwaDNIdVlrSlN6RXV0YnpBenhwdDVCWE11MHg5c3FLbmd6U1dSdEF3SzFqQUJEUDFDCnYyUXZQLzFnYm5sZklLMDAwOW1iVkFYbi9hOVMrWFRaeFp3a2tnRXM4bFgyUUNtbVVBUGtwRUNCSEQxWHRKRG0KNXVCeUJYS3hLbzBUWUhwMERkWnphdHlsZkdYWjAyVC9DZGZESHNRb0xpK3NaMXJaM1BpUURCTVpSbnJyL1l5WQpzYXluQm80OWJlVGZTYVZKVS9vc2xtTHBGR0FQRWlsQTNwR05ZOUJLOXdWSXMvVURsMWdsK2JySUhrM216aVZQClMzajhpVThpeXFlRVJKRUlTOWtIRnBnT2Jwdk9seFZoOTl3YkdCNHNadWRRCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  ca.p12: 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
+  ca.password: YWx5dURyaG1iNktr
+kind: Secret
+metadata:
+  annotations:
+    strimzi.io/ca-cert-generation: '0'
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: certificate-authority
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: certificate-authority
+    strimzi.io/kind: Kafka
+    strimzi.io/name: strimzi
+  name: onap-strimzi-cluster-ca-cert
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  cluster-operator.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVTekNDQWpPZ0F3SUJBZ0lVYSttK25TR0VDQkd3L2o3U3MwSDNORmNmalpVd0RRWUpLb1pJaHZjTkFRRU4KQlFBd0xURVRNQkVHQTFVRUNnd0thVzh1YzNSeWFXMTZhVEVXTUJRR0ExVUVBd3dOWTJ4MWMzUmxjaTFqWVNCMgpNREFlRncweU5qQXhNak13T0RJNE16aGFGdzB5TnpBeE1qTXdPREk0TXpoYU1EQXhFekFSQmdOVkJBb01DbWx2CkxuTjBjbWx0ZW1reEdUQVhCZ05WQkFNTUVHTnNkWE4wWlhJdGIzQmxjbUYwYjNJd2dnRWlNQTBHQ1NxR1NJYjMKRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFETXNadGZPVURJRXJOeDFBZU9DTnlTL0I1QkVsbGZNOUdpRkdFMApGVzZsMWRSdi9RK25jOUNDNWJuckVCZjFPOWxhMlBxeTd2VURRQVUzRDgva0Q4aTRTVjNxUWZ2b3BncEU2VkNVCnZCakhILzFhZmRmaHVKS0k0bWRaNHdpWk02Wmw4TVdkZS9TTHhSOHZxeUl0NEFIVGtEUXNDL3pOTUFSNmNlcGMKQzgwU3lmM0lVYy9OS2htRVFaUVZmTGNnb3BhZzlYZ2ZlblVVL3ZEemhyWEl4M05nK2JLVnlGUG0xc0lYT1A2bAo2bkEzR0IrQU41QURqdWduUStpSWJiQ056Sm0zcUxqNXdjQ05aQ3RNY0lpSERSeVdjQmswa2dCbGxDT0JBRTNtCnNxR3dXcG1oeC9PeWFpaE9Sc2ZCd3hqcU9XZlllMlI1ZzV5TVFoNitvV0kzQm8wN0FnTUJBQUdqWURCZU1CMEcKQTFVZERnUVdCQlJjM3NyNlZNYW00V0VuY25HeWxRdjJtME9yYnpBTUJnTlZIUk1CQWY4RUFqQUFNQTRHQTFVZApEd0VCL3dRRUF3SUZvREFmQmdOVkhTTUVHREFXZ0JSMThnRk5hUHpZTEs2QW5qa2U1VEVvVU53RE5qQU5CZ2txCmhraUc5dzBCQVEwRkFBT0NBZ0VBaC96VHA4NG1pNkRBSlhwWmNaNzlBSkphWVcxSG9GSHQ2dVlib1p1NFVRSnoKa3FiNFZyV0xvbjluanAyeERlcGh1aDBQaGg3OTRPM1B1elAybWd0bUpVZ24wb1hHZ09pNVptV1F0Tk9DSkVuOQpzNFJwNFhXQ2RaZ1JOR0NMMy9obnQ0bVorN1prM1RIVzMvTWd4OE5YYVpDdk5BQmEvS1RCQlVRWWprK05UYnZQCnNMOXNVMUlYTmN6MVBkME9tUE1iN1VPU21kdmNGZDB5QU9IM1N5VXlhMnJYWVVKZWlKelBheko5N0lxbjNaNE4KL0hpdThtN0hvRndDekt4NHFWQ3ZpazRlSEd5UUFRbmMzdlduSjRGcDQvKzE2d21xcE4yaThHSEFVajg4UnJ3cApHMlU1b0YwcHQrUXJYc3A0Vmd1OWt0NmQ2Um9OeGxpZ3BHYUZ4Y3c4eE1PZW4raDMwK1RtUzlMWkpuanhCdXFFCkl2TzlqM0hNeXNocFUwN3plUU9GenlQVk9qcGNrOTZxNEdsbFJYL1NLQnpLbjl5emZMVkxVcmVnQ2htbWNFUEQKVDE0Unc5Ym9pUFV1NFo5VTBVTG1CL3lGdXM3QlB3SFR0TGFtS0FqeW14akR1cFluMFhaeG8xSUN4VXFVSjRFUwpvSnBYc3VFa2F6aXc5WkJrSVc2NmtmSVJxNTdsTWtPOWdOSXVYN0dMbGdFWTB3NG96Tkt5RUYyLzNjK29sMTZsCmdwZW8zTDhvYjhMTDhXSE5ENjJQSjdQdVM4Qnl2cGdhWVB0UHJLbVhYdTlMSVhEZy9LMmNEVXVlV241ek55YmYKUnhvRjIrUmI2VFdnOFdqZXNHS3BnazRWOURnSEFtdTZ6Uk00dHhpcE9rSU43cUJGS1NxV3hZS2lvTC9pTnBNPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  cluster-operator.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRRE1zWnRmT1VESUVyTngKMUFlT0NOeVMvQjVCRWxsZk05R2lGR0UwRlc2bDFkUnYvUStuYzlDQzVibnJFQmYxTzlsYTJQcXk3dlVEUUFVMwpEOC9rRDhpNFNWM3FRZnZvcGdwRTZWQ1V2QmpISC8xYWZkZmh1SktJNG1kWjR3aVpNNlpsOE1XZGUvU0x4Ujh2CnF5SXQ0QUhUa0RRc0Mvek5NQVI2Y2VwY0M4MFN5ZjNJVWMvTktobUVRWlFWZkxjZ29wYWc5WGdmZW5VVS92RHoKaHJYSXgzTmcrYktWeUZQbTFzSVhPUDZsNm5BM0dCK0FONUFEanVnblEraUliYkNOekptM3FMajV3Y0NOWkN0TQpjSWlIRFJ5V2NCazBrZ0JsbENPQkFFM21zcUd3V3BtaHgvT3lhaWhPUnNmQnd4anFPV2ZZZTJSNWc1eU1RaDYrCm9XSTNCbzA3QWdNQkFBRUNnZ0VBQ24zRDUrS0lWbmpXNTZ1bFkzdEN5dW5QSnlpb21mK083QTY5V0swTWljVm0KNlFLQWJlVzZ0eXJORjZZd2hDbzRIcmJtU291QzFWTFBzWjNHMnZxUUlCbnFqVm9xYmljc2VaRzN4cGZKY1ZOTAphZnJ2T0t0OEh6WHpkQ0Qxek54ZjEvTzZQVE1nT3BXMDNuMlg5OS8yV0FDWkcvVFZWVEx6MTg3RTQwamJqdTNoCjdETFREeE1iNkowMzJscXRxSWdMZ2tCMncrTjBVdE5wS0RlV3BmTGN6eTdEWHZzYWx2VXJVTXlOTE5uOXUvamIKVjdIYmZ6UHJkZDRaY20yenkvOWNYVk5CNDVHeFZhWTNrZHJoS0loTlgzbFZFeHJMaGtBa0h3WnpMRTY3UHkyYwp0SlhWR0dLZjF3Y0szU3lkQS9FeEZBRFBjbWdaa3VnWnIvaWhvbzF3b1FLQmdRRHd2Tk1rZGNLUUJMSnpzNmdLCnI0U2Z2RVRISUQzYWZ0Nm9EV3NkdkhwT1VROWpDWWpPTDFCVUNIL0V1bGRKZFROY3FVOGdnd2tIbHpLT1pleHYKaVR1Y3pnRVQ2QzRwdjBHUGFodmo5OGV0RWNRYTJNekMvak43OWI2RFl5Z09ydVVBRnIza2NlN0lrV3lSWllKTwpPSkVQWjd4OXBrdXlDV09NYnczcmR1b3c2d0tCZ1FEWnE4cFVVRTNIUUlWcGJVeG5UUEE3eEhSQXlNM0dGVEdXCklaTE5OREszbmR0VXJITTZRdHgwS0RCWmNSWnNDYmV4OUUrZEVxc0V4N3lud1hsakNDTG9sblY2NzU0Sm9lTzMKWkQxbGs0RUtvUXVzN2ZVTnhHSVMvZW9OK3lDRS9VZEZZNFVYaXVNb3ZRT0hOTDBCT0dMOWJWTWFHWmtEV3kvcwpBaDZCdGd1QThRS0JnRkIxeTl3VHY4T0N6bUg5V2R5NGJRczJVWVo4TURBbTF5UXoxK2xJWlZobm4wenFrdDdXCjBYSkVwTytMbUVEayt4V3RRTlVNOXFlaTBUTG12ZTlKWHJNNTV3SlFSNTJNWHMwZ0dkSkhybVVaMndGZUZKSFgKaEQyYUZPSzA4VjUyOWZMaHB2WURYbHVLdjA2WkxzUVdBK1d5TmoySXB5UUtIMHVBa3Bad1dEV2hBb0dCQUxWbwptZ0I0eU1tbHVVcHJJQUQ3dXo5a2RDckY3OUVGT3NWUGg4UmptMTB5UDJnckxRRkNWZTZzeTliUERBdlFjWHJyCkRTcndNdjJSNVdXK05nZFY4Wm44UXo3STB1SmVQS1ZMOG10a2FtaE1YYW1xeTgvRWVxUXZYOUIxR2Q0Y0pEanQKUHkrbXZiam5Camk1dUVkN0VlejZId2NpakVhaXlhYWRBWVhERFlWUkFvR0JBS2pBUVlqV0NyRnpWclhCQUpZUQpsYnEzbzhjMng2ZURrOGJGaHJIbnRmUFZta3NmN2RPcTRPNWlERUIrdUJkVzk3Y1YrRFkwZURxSW0xYVcvYmVJCmRmbklTZXhPUTA0V05HTVYwRzVKUW43YUZWcVpTRDRlRjBGUlIycXU4aGxsMG1CNC9Kckw5dzVweWZKdGV1N1AKUFpXT0tvZ0RJM1RKa2I3V09ZVk1HSWVPCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+kind: Secret
+metadata:
+  annotations:
+    strimzi.io/cluster-ca-cert-generation: '0'
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: strimzi
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: strimzi
+    strimzi.io/kind: Kafka
+    strimzi.io/name: strimzi
+  name: onap-strimzi-cluster-operator-certs
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  entity-operator.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVYVENDQWtXZ0F3SUJBZ0lVRHByVWlxcUd5OU0za2l3NlJRYnhmVE9ZeGlvd0RRWUpLb1pJaHZjTkFRRU4KQlFBd0xURVRNQkVHQTFVRUNnd0thVzh1YzNSeWFXMTZhVEVXTUJRR0ExVUVBd3dOWTJ4MWMzUmxjaTFqWVNCMgpNREFlRncweU5qQXhNak13T0RReE16RmFGdzB5TnpBeE1qTXdPRFF4TXpGYU1FSXhFekFSQmdOVkJBb01DbWx2CkxuTjBjbWx0ZW1reEt6QXBCZ05WQkFNTUltOXVZWEF0YzNSeWFXMTZhUzFsYm5ScGRIa3RkRzl3YVdNdGIzQmwKY21GMGIzSXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFET0hjYTRUT3NsT3FHTgp5Nm5uSXBGYVRaeDVHY0o2Y2cwdEdRaDNZOFpiclNXSFNzaWVGSllHWU5CS0R6cmNWWTdva3NKOFR3ZENydDRmCnh3ODJsdmFvVks4S2hxK3hSdkF0Q3pnYjhWdUxzWld4Z01oNXQzSnBobjZFR2dQZXlhOUlVaGthN1VyZnhITW0KdGJabENLcW5GdzQvbGlBcEZ2N3o3OGxybjZEVkt1RHVSQjZPTDF6T0pkYk4yMFhuYXVzKzlGY2lPMG1DTWRoNgpWc1NzZnNSNlJJNXlUUk85UUNpc3BNYzVxTUNqaVNHQnhLc1hJQjkyRGVuVW1nNmo2SGNGNFJYOHVCczZOZ1hwCkhvbG5STWlyYmlBUCtpMjJ0akZJenlRYW8rRjZXL1M3RjRYaUJQYzMydTVGVXV0TiswV3poR1ZIbjIwSlBKdzEKbloveDVUbGJBZ01CQUFHallEQmVNQjBHQTFVZERnUVdCQlI2dm9iNlJSZXlxVTJ3bG1vZmJJNTExZEVwV3pBTQpCZ05WSFJNQkFmOEVBakFBTUE0R0ExVWREd0VCL3dRRUF3SUZvREFmQmdOVkhTTUVHREFXZ0JSMThnRk5hUHpZCkxLNkFuamtlNVRFb1VOd0ROakFOQmdrcWhraUc5dzBCQVEwRkFBT0NBZ0VBVFhNSWFrZzVUMXAzM2dOU0hYZW0KSm5QZkFRZWE0WkowMlVTaXUxYXRjTVIwZWRXQ1lCeDNPRENUL2I1MitoTXNOV0pkWVROcGRuV2JyRDIxMWJYawpaU29zMEZiVHZna1BmZ3VaUERGWUhPWEtLcDNiajArYm9Hd1U0dWxWMTU2QU9xTXdwT0ZGUG1Zam5waVRZNVlJCk1taFRhYkl1VmhPaDVwSmJmNEdUZVRNZHBhNXdCelIvaHNLbUlHTm0wOGNQUlY5eXJEMWo2VHN2bHdXSHRGQnkKRjdKUVhMZVdpZ3V6M3FCSlVtREF1UjM2Yk9wRnhwTE02TVkzc2dyVkJaZHNlL0YrYWFQU1YvNkxrSEFRU0NWMgpqcnZxVy9wRytqRURiS1RHM0d0V1IwaVV0MjJHUHlvTDRyQ1BvWEVCRlpIbzQ0ZlJHajFRUXFLNCsvcHNXQ1d1CkFhZHRwVzFPRThML0VwY3RXb2hLUUVMSVVyVW1YYk1SSzRabjNCSkhyMlpZdHozUk9aYjgrVldwYmJkSWhVNzQKcmZSRjhzY1MrWmEzZ25PUTF2WTAydTFVcmJQbGk3ZXI5dzFyQ1VYaTdqUzNjTkJUYnlRZWhwQ0Vjd1dpN0VpNQpoeEJhVVJadVkvanV0VGFTT1dRSWN3b3U5ZHAxbmNTeHFaY3RQd1JKaU1pSEQvYWpjdXpkWnQ2ems3MXRQWFdWCnFocnZMRXZkZCsrRWlHZExHZFRhV2V5ODBlRFNBemF1Z3dSZ1pXMFhhb0YyY3NXM1hhT25SNmM1WjNTTnE5bzMKeDJGTFVZa2NlZ2Vxc1UvN1lqTUNRbngrdDRCcjhzdnd6NnArUFhTemRJbVFXWTYvRkdmbW5LbGdQRGtoVGoxSwpsTTc1ZVFQUHpNZ0FtRGpzcW5uYmxPdz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  entity-operator.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRRE9IY2E0VE9zbE9xR04KeTZubklwRmFUWng1R2NKNmNnMHRHUWgzWThaYnJTV0hTc2llRkpZR1lOQktEenJjVlk3b2tzSjhUd2RDcnQ0Zgp4dzgybHZhb1ZLOEtocSt4UnZBdEN6Z2I4VnVMc1pXeGdNaDV0M0pwaG42RUdnUGV5YTlJVWhrYTdVcmZ4SE1tCnRiWmxDS3FuRnc0L2xpQXBGdjd6Nzhscm42RFZLdUR1UkI2T0wxek9KZGJOMjBYbmF1cys5RmNpTzBtQ01kaDYKVnNTc2ZzUjZSSTV5VFJPOVFDaXNwTWM1cU1DamlTR0J4S3NYSUI5MkRlblVtZzZqNkhjRjRSWDh1QnM2TmdYcApIb2xuUk1pcmJpQVAraTIydGpGSXp5UWFvK0Y2Vy9TN0Y0WGlCUGMzMnU1RlV1dE4rMFd6aEdWSG4yMEpQSncxCm5aL3g1VGxiQWdNQkFBRUNnZ0VBRWt0Tjh0Z1BrT292ZDZTVUs4blkwOXZmOVFHeEkybG5FUHg2cGc5MWhpS0wKNzYwQlpHMHRxYkJESEgwQWtPNHp5bmNTNEZ5cXAza0UzeFl0eHFuSE1uRklhS3RFQWRIcTN3ZElEM2JiS2hRZgpnTFhqcXFYNmQ0ZWRTQlZWQ0VaU0VwMnkwUk12QlBCc29MVnYxRytIVWdyM3FValJDWm53YVc5UmdJWVdZaSszCmZJVk9UZlJGM0d4U1FkUFM2blVoWDRrRzU4NVNaR2txOFZVZ2tvT3ZWcmRCa2h2NlhKTXNRZVpWNytrZTNXU0QKK0JZbE4wU0pOYXNEQ3Mvbmg1TExBRHJsdS9tQ0Eya2JqMTNkeVJ3b0UzYTJVZnFBenNaYWU3bWNHNFBwaW1hQQovS2lsUmZtS2haWGpOeFR1K25aODVtdUJhNWttNEtsMFc1NERzdmJRZ1FLQmdRRHBrblliU0FFVkdsODR3dFVuCjhFcmprbTN1blBKOXhoV08veVViR01OMHdGKzRNaW0rak5MWmFZYTF0R0tuc3ZRRSs5Y3ErZmJFTHBDTFl4eDQKNFRVZU90U3U4SW9KY0cvR3pMUE5xa2phS0hGSW54Y2FtTEQ3Ny9IcE13TTViQXQvM2ZVYWVUaEtseVJEWUw3Ngp4N2E4eTJEcUlLNmFuN0pWem1yVHpaODQyd0tCZ1FEaDZHbHJwY1pkanpJQ1RKRHhvSmxaL3J1dmE4eStqdVVMCngyYmp2TmN2QmdyQzF6TnRWMUs2UFkycnVwVVJwZTZJRkdCYWovYzYzVFhETFAyMHBqdlpPb1FlZ24yZ001SFIKSnhQMTVoUFgwYkhPYk5hb2xlOEgwb3hjaEFnWHQ5RlBBK1R1MXkyTVd2dStOUmFIbzFoanNXRWYxMDcwRnBoNwphdWFobGJPcGdRS0JnUUNMUWptTXRuZCt2NFI2Y1I5cGVva0wrZWYxVmpuMTV6NC9UYnd2MWFualdEYzV1UjdPCmIyUGZJRjJpeEhQMWpHcVU5aG9wazNNZk1Ld1pqdlFRMWlVM2F0Z1huVzZQaGl2K21WbXlpNDU0RTVqSE5hTXUKeGs3dlJ2WXlsYW1jZU9DNlVmbXEyUTlJMmFoVFM4RlIvL1RoeDFoMi94bGJNMCsrZlIyUVBvNXA5UUtCZ1FDcAp4UUlzZnNsakdEREozNFp4djNKZlducnJxc1NVVkVpM0lHUW5NNHcyNzRCNHlrY0FuY1l5NWYwb21EQmNzZWxmClpJakFwajV5Z3psYTh0MjZ1ODV3UW5SMWhUVXBobmZIeVdsTHUxc2dMcHREK1RFY1Fvait4UERzdWVCbkNxSUcKa25PaU5oMHB4Rm81cUNYRlN6RXF3bXV1QlIxMWUrR2Rwa21xRnhtTWdRS0JnQ3I2TWtMSmg3U25BUWZVM2tMaQpYN0NnWlFxQXJ4bzZKVENVT2x6UGh0RWcxWHRzVG1LRU5xclRXK2hHbjNVMWwvcXA1RWxOaVpOenJXV2krWjRuCmpicTZNVW5pZVBZeHI3VXZyNEo5eFNnMEFuMXZpdzhORVYvMHdRRlhXb0xMZThKRWxoZmdvOFJDWHNtbWdsR0oKWEVrb01zbmdrSUtCcUs0NUhTTDN2YW5TCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+kind: Secret
+metadata:
+  annotations:
+    strimzi.io/cluster-ca-cert-generation: '0'
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: entity-topic-operator
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: entity-topic-operator
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-entity-topic-operator
+  name: onap-strimzi-entity-topic-operator-certs
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  entity-operator.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVYRENDQWtTZ0F3SUJBZ0lVZkdVeEVHOTkvNCtTUUlueGExLzdvT283dVR3d0RRWUpLb1pJaHZjTkFRRU4KQlFBd0xURVRNQkVHQTFVRUNnd0thVzh1YzNSeWFXMTZhVEVXTUJRR0ExVUVBd3dOWTJ4MWMzUmxjaTFqWVNCMgpNREFlRncweU5qQXhNak13T0RReE16SmFGdzB5TnpBeE1qTXdPRFF4TXpKYU1FRXhFekFSQmdOVkJBb01DbWx2CkxuTjBjbWx0ZW1reEtqQW9CZ05WQkFNTUlXOXVZWEF0YzNSeWFXMTZhUzFsYm5ScGRIa3RkWE5sY2kxdmNHVnkKWVhSdmNqQ0NBU0l3RFFZSktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQUpya1FKLzZmV3NVTTluRwp4bVB3T2NIK3RJUVg0RUR0a1RkWEJNTzFvaDV3M29mSlhiOENqc09kVnQvRXVJdlhNQThnSDdJaStBZExtc2NoCjlKT3psdWhrUzVuUUx1MmRJOGw1YXdySy9Bc2lLOG9xV3NLS2ttUHY1aENRaEtVU1JCRlEyQnpJd2kyVzRSRDYKVDFiWjRYL0ZSWUhJcldjMm85amkxcjF0M0VVd25QRmgwWGNmNklkWjdCNnArYmFURHNEWXZuUG1xN2VpZFBObAp6bFZYTTFESCt4cGhMUFBSOHRSSDNRbmc2TXJDbWthcmFTaHRFRGwrMWl4MWpadldQQ3NTRW11Uno0M2lxRytQClNYNkkvTUpFWXNxUUpCMmJsUDJCZGJBL3RXZVRheDh1Y0E1NHl0MnRyaE5yanRqQlpFbUlYdThPMXVNNjVOd3QKcW1jSnJpTUNBd0VBQWFOZ01GNHdIUVlEVlIwT0JCWUVGQkVWbktFc3l2UUpVK0FBMEEyOWlZWDZ5Sy9GTUF3RwpBMVVkRXdFQi93UUNNQUF3RGdZRFZSMFBBUUgvQkFRREFnV2dNQjhHQTFVZEl3UVlNQmFBRkhYeUFVMW8vTmdzCnJvQ2VPUjdsTVNoUTNBTTJNQTBHQ1NxR1NJYjNEUUVCRFFVQUE0SUNBUUFTc3lBaUU1VjRWZXFOUnlZTEFXUEwKL1dxaTJYaFlzWElZRll5ZFNvaXFZdUFhdkxiOEpZVmhibXRTY1M1Z1B2Zk9NQVJVaHVYVVJjOUxLQW1lTDhQZgpSdHZRWTdqaEV2NERpdUtielF0MTNWSEFOVlVkY0ZSb24vNm00cGE5YzdHMU9HWW1HRnZST2VydFlHS1Y3Zkh1Cmh5eTZYU2tGTVk3VjRQY1dTUkpWV1Z2QU5Jdy9XUXhLbksrc3B0UVlFUDVCb0o0SDg3VTZFcnpxdUVocmE2Q0QKd0JTcnFnY1lTR2dxK1ZuTFRZVTQ2RHlxMjVtTE1KTHpwV25BOE5VeXl4bGd0L0VKQmFEOTFNNlF0cUlGSFdvagpBVDAxMXdIU2pJbm5SMG85YjVGOUhCb1NxZGlrOXJXQUp1YzBuUFB2QmJESm1YK1JRZGl5QUkrUEltVE15OEE3CjdYaW1DQmthcWFURHZyTDR4Z0RpdHlQT1Z5VUlGSlp0UlFMOVNnMHp1cGU2S2NDSzNjejQ0UjFJZWtUWVM1UkwKb0dFQm85RkRBTFVZaVg0TGx4ajhTSGRhd0FleWMxbExtZHl5a2hwU3dOdHFucnhQT3Q1UVdia2pSTFIwUFVsWgpCeFFTUkRZTDVRL25ubXVja3JrNnp0N3k2Z3QzOXZEYjVrME94Vm54Rnd1b3NXN3JFTC85c0dPNGY0bmNQOHVqCmp0RnRYNU5xd0o0eDZMY1BCSUpvbnhjMjJvSkhVLzhsdjhLUTFsRHpoOHp2U2RiNWRBdzBDWGJhYWoyNW9kZXoKMzBuMXNPZHJ4cHNuY05MSnk4a20veVlHeGF0MkxoQzdPdDBhM1RQQVdueWpTVmNScUh6NHhhei90RnNvT2JyRwpNSVByb1hVK0pCemFKcTZ6Vk80TEJBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  entity-operator.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ2E1RUNmK24xckZEUFoKeHNaajhEbkIvclNFRitCQTdaRTNWd1REdGFJZWNONkh5VjIvQW83RG5WYmZ4TGlMMXpBUElCK3lJdmdIUzVySApJZlNUczVib1pFdVowQzd0blNQSmVXc0t5dndMSWl2S0tsckNpcEpqNytZUWtJU2xFa1FSVU5nY3lNSXRsdUVRCitrOVcyZUYveFVXQnlLMW5OcVBZNHRhOWJkeEZNSnp4WWRGM0graUhXZXdlcWZtMmt3N0EyTDV6NXF1M29uVHoKWmM1VlZ6TlF4L3NhWVN6ejBmTFVSOTBKNE9qS3dwcEdxMmtvYlJBNWZ0WXNkWTJiMWp3ckVoSnJrYytONHFodgpqMGwraVB6Q1JHTEtrQ1FkbTVUOWdYV3dQN1ZuazJzZkxuQU9lTXJkcmE0VGE0N1l3V1JKaUY3dkR0YmpPdVRjCkxhcG5DYTRqQWdNQkFBRUNnZ0VBUUF4Nm5LeWNDQmRHaVpza2xsYlR5MkJqak92Q2s1YXBJZFVkNXovSVZnWWUKUHRBSnI5NkM0bWpCYjY2TkVXWmVQU0x2ZUYzMWFpN2RSZExJcS9yclFCV1pIWFYwc2xUMFkyK056OXkzOUhLZwo0T3c2czQ5UmtYbTJETXQxemp5TFlRMnBEOTRFVFkzQ2E1N1dCL2Y0d3pqejBRTUdrVk9LMVRpWHk2VU9ISjJrCm5nd2ZMRDVyV1ozRVFCZ3MwUVIxVU9SWU0zSlkzWXc4eUREVjZyc29wRVBwQkJrN1poNjI5NFovVTIyN3Qrb1EKcmVwb2hqd1h5Z3ovMnJsUlRSZnh5RkhGeDlQSXNHbzZuRndhK3V4TDFDZWQrQTJNQzZ6ZHh1MHByNFdDR1Z6MwpKRWxBQnlGMzg5OEhOeWZKSVZrV0VBemxVL3ZscDBFMlpjck0rZ1l1Z1FLQmdRRFI3OEhpbytENWxWQXlBUHAzCndJWnEvVGN1a3poOWlrT2ZaVVlEeFNqbU40VmhGMXF3ZkNRQ0dTNzNOMEtHN3VkQjhsa0pUU3dZVUN2UTZiU2MKRGE5Z3dIOFJPNFNNbHJNZjVlZ3BvTlhQM3hGNThYSzlhQ1lLb1ZQcFJLai9HUGZ6Uk1YRTBiaVF2dEhYWVZNZApINm5LZGZ4QTBweEhneS9Vb1RnbjI4MnZNUUtCZ1FDODRKZkNkZ05GN2E2YmZlSjQ2MFN4S2xzQldkWUEvSGNJCmN1Y3EvMEx3TURxVU1WUm4xNngwMk9XRkNONk5DRm9TMTFXWjJoT2JLaFQrNmxMTUZpdG02MjI2VXVuWjZ5NFIKbzNrSUpVWDhWQWgwc25iZ29mUDFhT0pQbEJDcmdzeHZITjdsOC8rdHFFdkU5QlJJK3FGQ3diamhpQ25yZ1dHVAo0dFN2Z0Z3bGt3S0JnSFNMOVFnOFVHWmVwVEhOWno5YUM0V1Q0N0dnbTRqZVhHSStGOXQ1OWhXd2x3UnFzYmN1Cmc5TUNaaGRxZnkxbnJjem5uTlJVR25tNDhFby9wRHZLUVNXbVdDU1o5U0VUZklmbDI3aFlpTHFwTFF1VXBrMU8KWjJnWlhmc3ZXZDZjM3ZJWHFPOTJPazlwRUJmUStSSS9CTVRZTVYxUFR1RklqQ0l3Q252ZVE5YlJBb0dBV2ovcQo0L1ZsM1AwVVNLSWZHKzQzRlh5S25adWlnVGdoWEgwaTdrMm9XNEtBQ3gyREdsZFl4VUI2YzFYb21YVWJMUk9OCmlJVkdod2JWbjNTeCtXakNkbHdhUTBTcER3S3NNYXR1QXJGa3Zvd2N1ajRvUlcrOVZVODNqQlRRM2xNU2dpbEcKYkpScFlENGhia3UrZ1p5WWY0QjNhZlNaS3puWU9VVFNvY1Z3d2xjQ2dZRUFoRHYwWHd4dG10TnlJckJkNnlNSgpNOC9rd3RWNU0zUVZlNUkrL1l6SlZSU1ROTWUxM0tzWmwrNmQ1NUNOV2ZPalNRbW5Ebjg5N1Z5bTZwclRycTVaCkd5enVDVmJhemwyaFZCeitnczVWYXA0U1BhbGdaOWl2MVNBTE1aSysxSWQ0NUljUXRURE9maTJRU0lqenEyMm8KNEVkRWJXVlZqWU04MjZRMHUySFhxWnM9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+kind: Secret
+metadata:
+  annotations:
+    strimzi.io/cluster-ca-cert-generation: '0'
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: entity-user-operator
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: entity-user-operator
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-entity-user-operator
+  name: onap-strimzi-entity-user-operator-certs
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  onap-strimzi-onap-strimzi-broker-0.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUdNekNDQkJ1Z0F3SUJBZ0lVUjkzaG8xWUd2eGlLMGxNd3VvekFlZGhJZ05jd0RRWUpLb1pJaHZjTkFRRU4KQlFBd0xURVRNQkVHQTFVRUNnd0thVzh1YzNSeWFXMTZhVEVXTUJRR0ExVUVBd3dOWTJ4MWMzUmxjaTFqWVNCMgpNREFlRncweU5qQXhNak13T0RJNE5EQmFGdzB5TnpBeE1qTXdPREk0TkRCYU1ESXhFekFSQmdOVkJBb01DbWx2CkxuTjBjbWx0ZW1reEd6QVpCZ05WQkFNTUVtOXVZWEF0YzNSeWFXMTZhUzFyWVdacllUQ0NBU0l3RFFZSktvWkkKaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFLMGdZN3lVUjhRbXlYTWR1WDRXdkVmUVlyRllaNThwa2tVdgp1YjJJeEhjV2tzTjBVbUVrYzd5ejJ5b3lUVzl0eFdFNUQ2K2lPMGRSZkxRenYxZUJGVmx1dkNLL3JHMW1md2NWClZra21vdjJ4Z1Zhc2dab2VXK2FmWUNkZ3B1V1k1TWFNRVhOVlZwbU5OdzJybzJRRGxaakh4RVgyYmZoSmFJQmQKRW8vcWltWUQ2dWZ3MExKNXFvWTVCaUVNUzhDeFV0THRCeHdwWkpVNGdUcHhBTUo4Zm5zclkxL3BiUzE0U1BEMgpnb2xmY2JrV05LSFllbGlNajdsWFY3MGpKUkg0T2FndFlrZ2czVXd4M0FlMEp6a1FDTm5vVEJuV2RMTjlRaTlyCktKNndXWEFIVGdZWFFCaFpjOHFNTm5wWUNYU1BxTzJVZUFMWW9tdThqUjNiUXBoak1WOENBd0VBQWFPQ0FrUXcKZ2dKQU1JSUIvQVlEVlIwUkJJSUI4ekNDQWUrQ00yOXVZWEF0YzNSeWFXMTZhUzFyWVdacllTMWliMjkwYzNSeQpZWEF1YjI1aGNDNXpkbU11WTJ4MWMzUmxjaTVzYjJOaGJJSWZiMjVoY0MxemRISnBiWHBwTFd0aFptdGhMV0p5CmIydGxjbk11YjI1aGNJSWFiMjVoY0MxemRISnBiWHBwTFd0aFptdGhMV0p5YjJ0bGNuT0NKVzl1WVhBdGMzUnkKYVcxNmFTMXJZV1pyWVMxaWIyOTBjM1J5WVhBdWIyNWhjQzV6ZG1PQ1ZHOXVZWEF0YzNSeWFXMTZhUzF2Ym1GdwpMWE4wY21sdGVta3RZbkp2YTJWeUxUQXViMjVoY0MxemRISnBiWHBwTFd0aFptdGhMV0p5YjJ0bGNuTXViMjVoCmNDNXpkbU11WTJ4MWMzUmxjaTVzYjJOaGJJSWpiMjVoY0MxemRISnBiWHBwTFd0aFptdGhMV0p5YjJ0bGNuTXUKYjI1aGNDNXpkbU9DTVc5dVlYQXRjM1J5YVcxNmFTMXJZV1pyWVMxaWNtOXJaWEp6TG05dVlYQXVjM1pqTG1OcwpkWE4wWlhJdWJHOWpZV3lDSVc5dVlYQXRjM1J5YVcxNmFTMXJZV1pyWVMxaWIyOTBjM1J5WVhBdWIyNWhjSUpHCmIyNWhjQzF6ZEhKcGJYcHBMVzl1WVhBdGMzUnlhVzE2YVMxaWNtOXJaWEl0TUM1dmJtRndMWE4wY21sdGVta3QKYTJGbWEyRXRZbkp2YTJWeWN5NXZibUZ3TG5OMlk0SWRhMkZtYTJFdFlYQnBMbk5wYlhCc1pXUmxiVzh1YjI1aApjQzV2Y21lQ0hHOXVZWEF0YzNSeWFXMTZhUzFyWVdacllTMWliMjkwYzNSeVlYQXdIUVlEVlIwT0JCWUVGS3FaClh1UnlpenFNSThyS1c0MG1aYXRiWXNTQ01COEdBMVVkSXdRWU1CYUFGSFh5QVUxby9OZ3Nyb0NlT1I3bE1TaFEKM0FNMk1BMEdDU3FHU0liM0RRRUJEUVVBQTRJQ0FRQmxVVUlTNHFDU0RKNm5MN0VUQXc4ME0rY0xNNHhhcXNyRAo0QmlGMVM5TVRMZ3VtcWVoRmlGSkhTYUV0ODJHN0F6REZtYTlFRjJhSHI0Mmd0WnpSbE01QnZzQm9DUlQxM2lDCkRuK05PY3BDcUQwbUNPTzZRRmNoSmpHWXJPamRsYUxtZ1lpejM4dEtFaktxUHR4cDdVZitQR0t5ekZqZUhaVnEKcTRJVDI3eHBhcG96NDMrM21yUG9od1dYSDk0d2xpQ2FsTkhSM2tFN3VaWDRPbnZRak5kbjJUZGJEbGpvQ0I0eApFVlBkYWZXRXhNQUFXanIvbUlPTE1teDVpNUR0NXFyYytiWXpJSkNldVdrR2VSOVlJYnlTVWUvYjZFWDk0WHU2Ck9WSkpxL2diMEpWYVdRcEJVdGtZaWU2c0RSYVBZczR3bWNtWjYwSlhXcHI5Rk9TVDRUU0JCcFlUTXhhVUxVdHIKWW4vRFJMRUk0c0lnRzFyWWg3b1BPK1RKS2o4WjNNaDZnblZNZjhWa0E3dVMrYVFObmRFOE1oSCtjY3pUQ3JhOQp6WmowVkRLNjMxdXJQdDI3SDI3S3ZjN0thczI2cmwzQUdpbk41MUFOYkZjcXZYK3U1aGFqelU3RDJ1NXJTRzA0ClNtcVRmR0xUTWFVYTIzejRPdzYrRFMrVENzY0QrTE5mdGFEOG51NnM1c1lUK3ZwWk56MFFMUHp2ZkVZYUl1Q0QKT25Lai9QT2pNeDdjVzI3NGNmcEpuaWRoRHZaT3l4SVRkOHlJSklGblpSMGJ5RE95cmlDS0pZSHVpbytoRUhmUwowYUdmK2tOK2xqQ3ZtbGMzTlB0aXZIR2x3Nnk2OVR3YU16dVJTN2hqQWU1NkhORTZQYnhCMzREa25QZWhOMHE0CjJLKzdVRmpEdlE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  onap-strimzi-onap-strimzi-broker-0.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQ3RJR084bEVmRUpzbHoKSGJsK0ZyeEgwR0t4V0dlZktaSkZMN205aU1SM0ZwTERkRkpoSkhPOHM5c3FNazF2YmNWaE9RK3ZvanRIVVh5MApNNzlYZ1JWWmJyd2l2Nnh0Wm44SEZWWkpKcUw5c1lGV3JJR2FIbHZtbjJBbllLYmxtT1RHakJGelZWYVpqVGNOCnE2TmtBNVdZeDhSRjltMzRTV2lBWFJLUDZvcG1BK3JuOE5DeWVhcUdPUVloREV2QXNWTFM3UWNjS1dTVk9JRTYKY1FEQ2ZINTdLMk5mNlcwdGVFanc5b0tKWDNHNUZqU2gySHBZakkrNVYxZTlJeVVSK0Rtb0xXSklJTjFNTWR3SAp0Q2M1RUFqWjZFd1oxblN6ZlVJdmF5aWVzRmx3QjA0R0YwQVlXWFBLakRaNldBbDBqNmp0bEhnQzJLSnJ2STBkCjIwS1lZekZmQWdNQkFBRUNnZ0VBQTBVYWdud29maTkwc1p4czh2dmtuWDlLOEpUb3RzeGh0Z3Nvam5NUUJ1Y2gKdnRoVkdxbWJiVmtycEEza0xESnphUnFGK0gxdmNqR1FwejlYb2dSTytNRkxMaEFzWm1VL3MvZGhYd0NxKzhZSApyb2FUN01CekN1cnF0WU94VTAwdEpsbzNRQ21WK1B0K1ZUU1o0WnMzRHZZdG9sdjlDQlNzTThuT1BuS2h5anNlCmFGQ3U0ekV1VnlhTnBSTTEzeTFlYUl1NkJVRFB0a0JFSndVd3lPQ3JkdkoybmZFbThKYjRnOWFjT05KaFo1Zk0KLzB4NGpaNGs4VzhSZVNJZHZXSHZBSWxGM25qdG05dXBEclg5eENQL2tkTGNHNmx2RDl4ay9QN1pCYVNUQkhtWAozaVRQWEdEdENpbklvM0F2TTcvMlJtR2t2RVljWWtTYlk3UTl2NG9DSlFLQmdRRGhTMUtaUlFPTXNGVzlPR3pjCnozVGhRRXZnYTl3cVdDYVJMWk9OVnM0NkpvWitiNXF6N005eWVNakVwS0QzRUJOQzFXemJFeVFGZTBJMjRCNmwKTlgwOWlod2VxbU5LaWVvUm42Tis0MXJOb3l1UFdCOWxlOGswam1WcnZZV21OWW5hQU9UMjI2Tm1xRm1RbE4xTApFZHk2TWxNM3N4ZlkvbFYyRCt1UXF3aEVCUUtCZ1FERXVPWHdUMGw1QVlOTUJOQlNOL05ydytSYUJGWkQrdmFmCnRvMlhxdkRCWk5Nc05KR3Z3aEx5RllERHhHenlyNmZ0bTNKZnk3RktoeWR6VncyZ0g5VEQrVlh5Rk1UVVZBLzMKOTJrdG9nbEIzbCt2aENVa0hSbzNMOHF3WjE1VjhoVW1DWW1HbGs0bENWa05pR0dmRVNWdTBNZkNScTloeFNtSAoxMCtIT3pPaEV3S0JnRG1FM1lXOEZQZnFYVGwrR20wVm1pV1lJTWNmUW9xZER0dXA0eTRHcDRnNUpjVktBUmxHCnNIL3RUblRHQTBLUW5CcElHdzZqaUdMTjRVM1pVbm1qZW1JbnpKNFhxbG54ZEEwajBMNG9sWnBDdW5CU2MxR1oKbFBrU0VkcTcvRTgvQS83Z2s1Umk1d2ppbWx0TFptUXdIMFo2YXJ5aHdNanB4aS9xU0o0YXpIVnhBb0dCQUluNQpHS1NVSjNic1BiYzZoUlcxVWxBYUEzV3pKd0hrNmNhWTFmUXpHMHE0dVhkK28xTi9MYVNHdWxvVDBVbmhNMGx1ClJpaTBCM083R1V0SEdqSmRRTy8yVjNaRFpNMTY2L3hCbFk1QTRIZEhUUnNmOXFDK25KMXFNcUhJemh3L2Z0Ky8KdnFvYmoxRmduZ25reG5zM0htYjduYTgvdmxBM1pXcDE4N3hvSkV6ckFvR0JBTWJpN3U5ZFdDckhjWGl4bnJ4ZworSnFLTUhkdzl3MTJVTHJib2dqbEMycEMwcjdCWjNQdDB5Tk5LYVVXc1g3OVl2OW9HMkxjU1FCSXk1QkNuRTZvCmlpMDFtdFJ3RkJ6bWE3ZWpERlR1bFk5WUFaR1czTzJxRGZEdjh0Um9NekR3bEpwUVE3eHFDOTdYTFJOc1FTN1QKbGFKS3I3Z0lMWFRkcHE3V0xjMk4xTFAxCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+kind: Secret
+metadata:
+  annotations:
+    strimzi.io/clients-ca-cert-generation: '0'
+    strimzi.io/cluster-ca-cert-generation: '0'
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: kafka
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+  name: onap-strimzi-onap-strimzi-broker-0
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  onap-strimzi-onap-strimzi-controller-1.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUdIRENDQkFTZ0F3SUJBZ0lVUVNjYXEyeTdoQVdWVXN6ck5sRUpaWW1mNUF3d0RRWUpLb1pJaHZjTkFRRU4KQlFBd0xURVRNQkVHQTFVRUNnd0thVzh1YzNSeWFXMTZhVEVXTUJRR0ExVUVBd3dOWTJ4MWMzUmxjaTFqWVNCMgpNREFlRncweU5qQXhNak13T0RJNE5EQmFGdzB5TnpBeE1qTXdPREk0TkRCYU1ESXhFekFSQmdOVkJBb01DbWx2CkxuTjBjbWx0ZW1reEd6QVpCZ05WQkFNTUVtOXVZWEF0YzNSeWFXMTZhUzFyWVdacllUQ0NBU0l3RFFZSktvWkkKaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFMekxzSUU5THdhTWthQ29nWUJwOWJ4SkEybVFtdE9oVnVseAovTlkwUVI3aVo1aEwzRjl2Z25yMFJKVU1LcVR2UG9CaGs4d2xVSHR0dlJSVHdtcFBJQ2ZZcWRlY3MwOW95T2xiCmx3MU5oOGxEVmh0Ni90ZGNSSElQbDZNRFZFSWRMQ1h2MTFMeG5ORGVJM1JtYkIwTTN1NE9xREFSdUxFOEFBNVIKQklheWo0NnhIVVI4eWVhcTFQVDd4Nkt1SzFVcGhKckxHVTdvcXI5Z25ZcUFmc01TaXpYcjM5Q3hDUldRc1B5Zwo5Zzg2WDEyejhlcUlyOGRkV2lsSVVJMTBWZldoSWs3Z1ZRcW56cWdiY1oyM25xZTg3TjRndjRPRTRTQm5jdWJyCkJjdGVNQ1ZOODFOZGx5Y2krNTltM040azZiV2IzMms0NnAya2FlWTFROFc0WEpTZTNCc0NBd0VBQWFPQ0FpMHcKZ2dJcE1JSUI1UVlEVlIwUkJJSUIzRENDQWRpQ00yOXVZWEF0YzNSeWFXMTZhUzFyWVdacllTMWliMjkwYzNSeQpZWEF1YjI1aGNDNXpkbU11WTJ4MWMzUmxjaTVzYjJOaGJJSWZiMjVoY0MxemRISnBiWHBwTFd0aFptdGhMV0p5CmIydGxjbk11YjI1aGNJSWFiMjVoY0MxemRISnBiWHBwTFd0aFptdGhMV0p5YjJ0bGNuT0NKVzl1WVhBdGMzUnkKYVcxNmFTMXJZV1pyWVMxaWIyOTBjM1J5WVhBdWIyNWhjQzV6ZG1PQ0hHOXVZWEF0YzNSeWFXMTZhUzFyWVdacgpZUzFpYjI5MGMzUnlZWENDV0c5dVlYQXRjM1J5YVcxNmFTMXZibUZ3TFhOMGNtbHRlbWt0WTI5dWRISnZiR3hsCmNpMHhMbTl1WVhBdGMzUnlhVzE2YVMxcllXWnJZUzFpY205clpYSnpMbTl1WVhBdWMzWmpMbU5zZFhOMFpYSXUKYkc5allXeUNNVzl1WVhBdGMzUnlhVzE2YVMxcllXWnJZUzFpY205clpYSnpMbTl1WVhBdWMzWmpMbU5zZFhOMApaWEl1Ykc5allXeUNJVzl1WVhBdGMzUnlhVzE2YVMxcllXWnJZUzFpYjI5MGMzUnlZWEF1YjI1aGNJSktiMjVoCmNDMXpkSEpwYlhwcExXOXVZWEF0YzNSeWFXMTZhUzFqYjI1MGNtOXNiR1Z5TFRFdWIyNWhjQzF6ZEhKcGJYcHAKTFd0aFptdGhMV0p5YjJ0bGNuTXViMjVoY0M1emRtT0NJMjl1WVhBdGMzUnlhVzE2YVMxcllXWnJZUzFpY205cgpaWEp6TG05dVlYQXVjM1pqTUIwR0ExVWREZ1FXQkJTSW9OdTB1UkhWaXhzbnhpeFMxWTFTcHZrWFR6QWZCZ05WCkhTTUVHREFXZ0JSMThnRk5hUHpZTEs2QW5qa2U1VEVvVU53RE5qQU5CZ2txaGtpRzl3MEJBUTBGQUFPQ0FnRUEKT0ZWTC84NHd2d2JTekVoWFFIRmNYalhQS005d2dvTnQrdlFPcnI2TmNaSWM5cVBhRjJXOUJlTHBpWjVrNk1DYQo4aktNbFhMNjI1UTRWelFYNk11OVhkdkhBa245Q3hxWlpxL0RBbTB1dTJxOW95M3ZOZ1V0VytESExuM2RvWFowCjhTYVNSS3lDNTBFdXc4SlArZXBvT0FUcXNwQmtjZEQ0VjZMeVZ1ek0xVnZieElyeERIc3ZCSnBBQVVsdnhoZm0KNG84R2RkVVNva0UwK2xPVmRmUHIyNGx3YjJ2T2RYUnkzVnMvSW1MdURURk5NcFh5NURDMHJsNVZqRU4vM3lCQwoxajdrTGw3M0RFQ0tLZ1l3bzA5eEtnbVQ5RGFrVnRPZ1Q5THM2V1E5Wno3cWVRVWEvd3ZhNS85MmZZUmFkVEVoCm5EanRVQ3NraE91SVdjakp1emRXQXNqY2pvb01MZ3J1S0crYVlPQlEzMy9TMkpUdUQwYWpWMWp6UnJYenpCZ0cKOXFIWFFtWko0bHRRQTRiWnc3eEVkbEk0OE1lbkpkSXBKNFFXOW4vdjZNV0N1Tjd3RDBmQ043TXFrY1pKcmF4awpMRXlIL0N6aU1GMitSZVdLcjZwMEN6NVhkNGdXSjlIT28rOHlaeGVrOEE1WGdpLzdvdUtLZDRLMStHcXdvb1B4Cm9qcHNseEVTN2RYZUtFRGdORFlWZFdORHI0aVFnR0VTSzBucEM1NXIyRk9lUGpDdGVtcTlqZktuNU5GczJDZjcKZTBVTlFDWGs1RXRSLzV3MEJiTzhCbk1VRWw1b2NqZ1NHTExGZUZscTFVek1Uczl3aGMwV2w0cnhnNThnN0xMSgpncFk1Z3pqUGpHNWhsOFp4R01OV1Bxa0NYOGpjTWkxRCtGSG5lMC9PS3ZRPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  onap-strimzi-onap-strimzi-controller-1.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQzh5N0NCUFM4R2pKR2cKcUlHQWFmVzhTUU5wa0pyVG9WYnBjZnpXTkVFZTRtZVlTOXhmYjRKNjlFU1ZEQ3FrN3o2QVlaUE1KVkI3YmIwVQpVOEpxVHlBbjJLblhuTE5QYU1qcFc1Y05UWWZKUTFZYmV2N1hYRVJ5RDVlakExUkNIU3dsNzlkUzhaelEzaU4wClptd2RETjd1RHFnd0ViaXhQQUFPVVFTR3NvK09zUjFFZk1ubXF0VDArOGVpcml0VktZU2F5eGxPNktxL1lKMksKZ0g3REVvczE2OS9Rc1FrVmtMRDhvUFlQT2w5ZHMvSHFpSy9IWFZvcFNGQ05kRlgxb1NKTzRGVUtwODZvRzNHZAp0NTZudk96ZUlMK0RoT0VnWjNMbTZ3WExYakFsVGZOVFhaY25JdnVmWnR6ZUpPbTFtOTlwT09xZHBHbm1OVVBGCnVGeVVudHdiQWdNQkFBRUNnZ0VBVGNPdXU4VXFZZzJ6akZQc0o2czlnMlVscVMxZGdLOVRuOHVLWStiWkxmSCsKenMzc2cwam9tMkdUQUR1bk14R3lrbW5lMlhkRE85djdSbXlyeDJNNU1RQi9FT2NrT3FERUpNN0xuTGlqSmlUOAp5a3Z5dlYxdGVmZnZNeitUVExvOGJaSHBoT290ZUNFUHhJbk5uWGVvT2JGQzJLM3IvK0RoZXdRbkU1NW9JRk1oCmpFVWlOY2tpU0x0TnZIZ3VoeFc0M0Z0bkYxdkRzVXVLUjU2ZWJrd1pZcDhyZ0Z0SExwQU9xdzlTY2xuSXlyZDAKRmYwRTFEVFdCMkdTaDJ0alVVdyt5UnA3WDNjVlVQeDlXeWVJMXVSdjJ5bWJFbDNxUkhRRHg0cDNEbGlIcU9ncAp4N0xRdVBHQmplVzVkeExBb2Y5aVBqOFVsYVZoa2tCOU5relJmQ1FldFFLQmdRRG5jQm9LWUo2VHF1cU9wRXcvCmtpTDhiVkcvUU5ua01UZFBnbTdRL1JRYUFGamYvUWNwaHUyZm9SSHNsNW1mTlVPL1IxWTdUSjdKZElrYUNjMEgKUWFZSUdVdFRwOGJvVElOQ1FBNUU4MHI4WE92R3BDc0pGTVpYUE1mQ3laSEEzTkN1U0tCNXE1QnVTVm4wZE82TwpiNHZqWVJSZ29jcGQya0NRTldnVENBalVEUUtCZ1FEUTFReEFCNFdLNEl5YlhNOUR4U1crRENNb1UzOGpyQ0duCjNjci9taEk2UmtZanpCSEhKZnc1VXdyd0Rncks5RzhEcGRGNWY3Rnp3KzNORXJGUjFlY0djN2x0TzJ4V0p3QlYKVjBCMFZjRmNWdlExTEVvK0VJSzNYTjFVZytRbkZQQnVCQzlPUWhpWWJZcjl1MHRBVkRUd1oyYUtXTVZER0w1aAplakJEaStxZXh3S0JnUUNHK2p4VnZRLy9NM2xsQTdGc2lnQlpsREJQQ0xXTGZxQ3hnSEs4OUR6YkJVVFFMYlFWCnBobkVOWjVNakFZT2NuUTJoSlpvTTBHUVlLVHRTTFlJKzJLbjZvaWlHNEhJVFlkb0JnL01hdEJhNnA2ZjFYTTcKOHAvU2xTSTBHbmNsTWlPSzRkU2w0VWQwNnRiSjJjQ2YxYktTUkRZc1BXL1cyTWs2MGNzRy9uS1hxUUtCZ0VocQplSk1EaUxWOTVJUkRqTVFOYTJjWndsOUxoUDBUeFovMmMxeHJTd0xXTjZCV05adi9laFZPeks0dDBHUk1tdXFDCjU3N2dIdUxzQUZ4cXJQNloxRUVTaEN4eXZNQ3JTWnhPWTFWMEgxY3IrQWN3VXBadkYwVUtlTjNEMXF3T3dNa0YKdm5tK3hkU2x0OXNBeGJtSytjaWJzcDBxNTB5N0dkbW5pM0VBNWQwbEFvR0FFT05BMVhBWDRCVnpwUHQvMnVvagpZUmlaNyt6ZFlBQ05mR1I0ckdlQzhwekZXRjM0aFcydGdlTzN5ZDA3cHByTytrb21lZ1VXYUc1UmVsanVwQnE1ClgydEU4Y2FzNy8vM252ZVRSeEdWai91Y2ZQaDVDbEF3QjV5SW95T3JqUmpCYlBZMU5wTVB2VWpwYkEvNGEwWDAKWkMvMzNNT2Q1eDhpNkRTbjZEc2hqQVE9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+kind: Secret
+metadata:
+  annotations:
+    strimzi.io/clients-ca-cert-generation: '0'
+    strimzi.io/cluster-ca-cert-generation: '0'
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: strimzi-cluster-operator
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/part-of: strimzi-onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/component-type: kafka
+    strimzi.io/kind: Kafka
+    strimzi.io/name: onap-strimzi-kafka
+  name: onap-strimzi-onap-strimzi-controller-1
+  namespace: onap
+type: Opaque
+---
+apiVersion: v1
+data:
+  password: WURpb2FnZHMzS3pkU2JOSUhWY2JGdnJLaml3TGNTVWM=
+  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0ic3RyaW16aS1rYWZrYS1hZG1pbiIgcGFzc3dvcmQ9IllEaW9hZ2RzM0t6ZFNiTklIVmNiRnZyS2ppd0xjU1VjIjs=
+kind: Secret
+metadata:
+  labels:
+    app: strimzi
+    app.kubernetes.io/instance: strimzi-kafka-admin
+    app.kubernetes.io/managed-by: strimzi-user-operator
+    app.kubernetes.io/name: strimzi-user-operator
+    app.kubernetes.io/part-of: strimzi-strimzi-kafka-admin
+    helm.sh/chart: strimzi-16.0.0
+    strimzi.io/cluster: onap-strimzi
+    strimzi.io/kind: KafkaUser
+    version: 16.0.0
+  name: strimzi-kafka-admin
+  namespace: onap
+type: Opaque
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  annotations:
+    strimzi.io/kraft: enabled
+    strimzi.io/node-pools: enabled
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+  name: onap-strimzi
+  namespace: onap
+spec:
+  entityOperator:
+    template:
+      pod:
+        imagePullSecrets: []
+        securityContext:
+          seccompProfile:
+            type: RuntimeDefault
+      topicOperatorContainer:
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          readOnlyRootFilesystem: true
+          runAsGroup: 1001
+          runAsNonRoot: true
+          runAsUser: 1001
+      userOperatorContainer:
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            - CAP_NET_RAW
+          readOnlyRootFilesystem: true
+          runAsGroup: 1001
+          runAsNonRoot: true
+          runAsUser: 1001
+    topicOperator:
+      resources:
+        limits:
+          cpu: 2
+          memory: 2Gi
+        requests:
+          cpu: 100m
+          memory: 1Gi
+    userOperator:
+      resources:
+        limits:
+          cpu: 2
+          memory: 2Gi
+        requests:
+          cpu: 100m
+          memory: 1Gi
+  kafka:
+    authorization:
+      superUsers:
+      - strimzi-kafka-admin
+      type: simple
+    config:
+      auto.create.topics.enable: true
+      default.replication.factor: 1
+      inter.broker.protocol.version: 3.9.0
+      log.message.format.version: 3.9.0
+      min.insync.replicas: 1
+      num.partitions: 2
+      offsets.topic.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      transaction.state.log.replication.factor: 1
+    listeners:
+    - authentication:
+        type: scram-sha-512
+      name: plain
+      port: 9092
+      tls: false
+      type: internal
+    - authentication:
+        type: tls
+      name: tls
+      port: 9093
+      tls: true
+      type: internal
+    - authentication:
+        type: tls
+      configuration:
+        bootstrap:
+          nodePort: 30493
+        brokers:
+        - advertisedHost: kafka-api.simpledemo.onap.org
+          advertisedPort: 9000
+          broker: 0
+          nodePort: 30490
+        - advertisedHost: kafka-api.simpledemo.onap.org
+          advertisedPort: 9001
+          broker: 1
+          nodePort: 30491
+        - advertisedHost: kafka-api.simpledemo.onap.org
+          advertisedPort: 9002
+          broker: 2
+          nodePort: 30492
+      name: external
+      port: 9094
+      tls: true
+      type: nodeport
+    version: 3.9.0
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  labels:
+    app: policy
+    app.kubernetes.io/instance: onap-policy
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: policy
+    helm.sh/chart: policy-17.0.0
+    strimzi.io/cluster: onap-strimzi
+    version: 17.0.0
+  name: onap-policy-kafka-user
+  namespace: onap
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    acls:
+    - operations:
+      - All
+      resource:
+        name: policy-group
+        type: group
+    - operations:
+      - All
+      resource:
+        name: policy-pdp-pap
+        type: topic
+    - operations:
+      - All
+      resource:
+        name: policy-heartbeat
+        type: topic
+    - operations:
+      - All
+      resource:
+        name: policy-notification
+        type: topic
+    type: simple
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  labels:
+    app: strimzi
+    app.kubernetes.io/instance: onap-strimzi
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: strimzi
+    helm.sh/chart: strimzi-16.0.0
+    strimzi.io/cluster: onap-strimzi
+    version: 16.0.0
+  name: strimzi-kafka-admin
+  namespace: onap
+spec:
+  authentication:
+    type: scram-sha-512
