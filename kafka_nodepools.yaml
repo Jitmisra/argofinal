@@ -1,0 +1,115 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+  name: onap-strimzi-broker
+  namespace: onap
+spec:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 2
+      memory: 2Gi
+    requests:
+      cpu: 100m
+      memory: 1Gi
+  roles:
+  - broker
+  storage:
+    type: jbod
+    volumes:
+    - class: smo-storage
+      deleteClaim: true
+      id: 0
+      kraftMetadata: shared
+      size: 2Gi
+      type: persistent-claim
+  template:
+    kafkaContainer:
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+          - CAP_NET_RAW
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        runAsUser: 1001
+    pod:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: strimzi.io/name
+                operator: In
+                values:
+                - onap-strimzi-broker
+            topologyKey: kubernetes.io/hostname
+      imagePullSecrets: []
+      securityContext:
+        fsGroup: 1001
+        runAsGroup: 1001
+        runAsUser: 1001
+        seccompProfile:
+          type: RuntimeDefault
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  labels:
+    app.kubernetes.io/instance: onap-strimzi
+    strimzi.io/cluster: onap-strimzi
+  name: onap-strimzi-controller
+  namespace: onap
+spec:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 2
+      memory: 2Gi
+    requests:
+      cpu: 100m
+      memory: 1Gi
+  roles:
+  - controller
+  storage:
+    type: jbod
+    volumes:
+    - class: smo-storage
+      deleteClaim: true
+      id: 0
+      kraftMetadata: shared
+      size: 1Gi
+      type: persistent-claim
+  template:
+    kafkaContainer:
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+          - CAP_NET_RAW
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        runAsUser: 1001
+    pod:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: strimzi.io/name
+                operator: In
+                values:
+                - onap-strimzi-controller
+            topologyKey: kubernetes.io/hostname
+      imagePullSecrets: []
+      securityContext:
+        fsGroup: 1001
+        runAsGroup: 1001
+        runAsUser: 1001
+        seccompProfile:
+          type: RuntimeDefault
