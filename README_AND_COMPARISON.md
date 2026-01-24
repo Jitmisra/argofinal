@@ -11,7 +11,7 @@ This folder contains **production-ready manifests** for deploying ONAP component
 
 ## GitOps Deployment Files
 
-### Core Component Manifests
+### Core Component Manifests (6 files)
 - `policy_full.yaml` - Complete Policy framework (54 resources)
 - `dcae_full.yaml` - DCAE VES Collector (7 resources)
 - `strimzi_full.yaml` - Kafka cluster resources in onap namespace (27 resources)
@@ -19,17 +19,10 @@ This folder contains **production-ready manifests** for deploying ONAP component
 - `kafka_nodepools.yaml` - KafkaNodePool CRs for broker and controller (required for Strimzi 0.46+)
 - `postgres_full.yaml` - PostgreSQL databases (24 resources)
 
-### RBAC and ServiceAccounts
-- `onap-read-role.yaml` - Role granting read access to Services
-- `onap-read-rolebinding.yaml` - Binds all ONAP ServiceAccounts to the read role
-- `sdnc-serviceaccounts.yaml` - Pre-created SDNC ServiceAccounts
-- `all_serviceaccounts.yaml` - Comprehensive list of all ServiceAccounts
+### RBAC (1 file)
+- `rbac.yaml` - Role and RoleBinding for all ONAP ServiceAccounts
 
-### Legacy/Manual Fix Files (HPE15 specific)
-- `sdnc_manual_fix.yaml` - SDNC with nil pointer fix (used on HPE15 before GitOps)
-- `onap-read-bindings.yaml` - Empty list (deprecated, use onap-read-rolebinding.yaml)
-
-### Configuration
+### Reference/Configuration
 - `user_desired_values.yaml` - User's original configuration preferences
 - `apply_values_override.py` - Reference script for generating overrides
 - `README_AND_COMPARISON.md` - This file
@@ -102,7 +95,7 @@ This folder contains **production-ready manifests** for deploying ONAP component
 - Check operator logs for errors
 
 **If Policy pods stuck in Init:**
-- Verify RBAC: `kubectl get rolebinding onap-read-binding -n onap`
+- Verify RBAC: `kubectl get role,rolebinding -n onap | grep onap-read`
 - Check ServiceAccount can query services: `kubectl auth can-i get services --as=system:serviceaccount:onap:onap-policy-api-read -n onap`
 
 **Storage Issues:**
