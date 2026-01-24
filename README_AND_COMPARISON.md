@@ -22,6 +22,10 @@ This folder contains **production-ready manifests** for deploying ONAP component
 ### RBAC (1 file)
 - `rbac.yaml` - Role and RoleBinding for all ONAP ServiceAccounts
 
+### ArgoCD & Infrastructure (2 files)
+- `argo-parent-app.yaml` - ArgoCD Application manifest for GitOps deployment
+- `smo-storageclass.yaml` - StorageClass definition for persistent volumes
+
 ### Reference/Configuration
 - `user_desired_values.yaml` - User's original configuration preferences
 - `apply_values_override.py` - Reference script for generating overrides
