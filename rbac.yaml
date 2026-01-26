@@ -283,3 +283,65 @@ subjects:
 - kind: ServiceAccount
   name: onap-strimzi-kafka
   namespace: onap
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: strimzi-cluster-operator-global-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: strimzi-cluster-operator-global
+subjects:
+- kind: ServiceAccount
+  name: strimzi-cluster-operator
+  namespace: strimzi-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: strimzi-cluster-operator-leader-election
+  namespace: strimzi-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: strimzi-cluster-operator-leader-election
+subjects:
+- kind: ServiceAccount
+  name: strimzi-cluster-operator
+  namespace: strimzi-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: strimzi-cluster-operator-namespaced
+  namespace: strimzi-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: strimzi-cluster-operator-namespaced
+subjects:
+- kind: ServiceAccount
+  name: strimzi-cluster-operator
+  namespace: strimzi-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: strimzi-cluster-operator-kafka-broker-delegation-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: strimzi-kafka-broker
+subjects:
+- kind: ServiceAccount
+  name: strimzi-cluster-operator
+  namespace: strimzi-system
