@@ -87,7 +87,7 @@ spec:
               apiVersion: v1
               fieldPath: metadata.namespace
         - name: STRIMZI_FEATURE_GATES
-          value: '+UseKafkaNodePools'
+          value: ''
         - name: STRIMZI_LEADER_ELECTION_ENABLED
           value: 'true'
         - name: STRIMZI_LEADER_ELECTION_LEASE_NAME

@@ -140,6 +140,10 @@ spec:
           env:
             - name: PROVISIONER_NAME
               value: cluster.local/nfs-server-provisioner
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
           args:
             - "-provisioner=cluster.local/nfs-server-provisioner"
           securityContext:
