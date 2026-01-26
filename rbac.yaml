@@ -1,17 +1,173 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+  name: onap-policy-api-read
+  namespace: onap
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-policy-pap-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-policy-clamp-runtime-acm-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-policy-clamp-ac-k8s-ppnt-create
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-policy-clamp-ac-http-ppnt-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-policy-clamp-ac-a1pms-ppnt-create
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-policy-apex-pdp-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-policy-clamp-ac-pf-ppnt-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-sdnc-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-sdnc-ansible-server-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-sdnc-web-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mariadb-galera
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-strimzi-kafka-bridge
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-strimzi-entity-operator
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: strimzi-cluster-operator
+  namespace: strimzi-system
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-dcae-ves-collector-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-policy-clamp-ac-kserve-ppnt-create
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-policy-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-strimzi-kafka
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onap-strimzi-kafka-read
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  annotations:
-    kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"annotations":{},"creationTimestamp":null,"name":"onap-read","namespace":"onap"},"rules":[{"apiGroups":[""],"resources":["services","endpoints","pods","configmaps","secrets"],"verbs":["get","list","watch"]}]}
-  creationTimestamp: "2026-01-23T09:25:07Z"
   name: onap-read
   namespace: onap
-  resourceVersion: "1207591"
-  uid: 83fcdced-15ab-4526-b650-22d24dfa4c1b
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
 rules:
 - apiGroups:
-  - ""
+  - ''
   - apps
   resources:
   - services
@@ -26,11 +182,14 @@ rules:
   - get
   - list
   - watch
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: onap-read-binding
   namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -46,7 +205,19 @@ subjects:
   name: onap-policy-clamp-runtime-acm-read
   namespace: onap
 - kind: ServiceAccount
+  name: onap-policy-clamp-ac-k8s-ppnt-create
+  namespace: onap
+- kind: ServiceAccount
+  name: onap-policy-clamp-ac-http-ppnt-read
+  namespace: onap
+- kind: ServiceAccount
+  name: onap-policy-clamp-ac-a1pms-ppnt-create
+  namespace: onap
+- kind: ServiceAccount
   name: onap-policy-apex-pdp-read
+  namespace: onap
+- kind: ServiceAccount
+  name: onap-policy-clamp-ac-pf-ppnt-read
   namespace: onap
 - kind: ServiceAccount
   name: onap-sdnc-read
@@ -56,4 +227,59 @@ subjects:
   namespace: onap
 - kind: ServiceAccount
   name: onap-sdnc-web-read
+  namespace: onap
+- kind: ServiceAccount
+  name: mariadb-galera
+  namespace: onap
+- kind: ServiceAccount
+  name: onap-strimzi-kafka
+  namespace: onap
+- kind: ServiceAccount
+  name: onap-strimzi-kafka-bridge
+  namespace: onap
+- kind: ServiceAccount
+  name: onap-strimzi-entity-operator
+  namespace: onap
+- kind: ServiceAccount
+  name: onap-dcae-ves-collector-read
+  namespace: onap
+- kind: ServiceAccount
+  name: onap-policy-clamp-ac-kserve-ppnt-create
+  namespace: onap
+- kind: ServiceAccount
+  name: onap-policy-read
+  namespace: onap
+- kind: ServiceAccount
+  name: onap-strimzi-kafka-read
+  namespace: onap
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: onap-strimzi-kafka-broker
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - nodes
+  - pods
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: onap-strimzi-kafka-broker-binding
+  annotations:
+    argocd.argoproj.io/sync-wave: '-3'
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: onap-strimzi-kafka-broker
+subjects:
+- kind: ServiceAccount
+  name: onap-strimzi-kafka
   namespace: onap

@@ -362,23 +362,3 @@ metadata:
     version: Oslo
   name: onap-dcaegen2-services-filebeat
   namespace: onap
----
-apiVersion: v1
-data:
-  password: RHQyRVRiNkQyS2QwdnF4QnNBVEVOWFFGQjkzdkNkZ2s=
-  sasl.jaas.config: b3JnLmFwYWNoZS5rYWZrYS5jb21tb24uc2VjdXJpdHkuc2NyYW0uU2NyYW1Mb2dpbk1vZHVsZSByZXF1aXJlZCB1c2VybmFtZT0iZGNhZS12ZXMtY29sbGVjdG9yLWt1IiBwYXNzd29yZD0iRHQyRVRiNkQyS2QwdnF4QnNBVEVOWFFGQjkzdkNkZ2siOw==
-kind: Secret
-metadata:
-  labels:
-    app: dcae-ves-collector
-    app.kubernetes.io/instance: dcae-ves-collector-ku
-    app.kubernetes.io/managed-by: strimzi-user-operator
-    app.kubernetes.io/name: strimzi-user-operator
-    app.kubernetes.io/part-of: strimzi-dcae-ves-collector-ku
-    helm.sh/chart: dcae-ves-collector-13.1.1
-    strimzi.io/cluster: onap-strimzi
-    strimzi.io/kind: KafkaUser
-    version: Oslo
-  name: dcae-ves-collector-ku
-  namespace: onap
-type: Opaque

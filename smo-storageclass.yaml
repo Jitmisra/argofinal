@@ -3,6 +3,8 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: smo-storage
+  annotations:
+    argocd.argoproj.io/sync-wave: '-5'
 provisioner: cluster.local/nfs-server-provisioner
 reclaimPolicy: Delete
 volumeBindingMode: Immediate

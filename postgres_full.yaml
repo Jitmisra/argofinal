@@ -1612,169 +1612,79 @@ metadata:
   namespace: onap
 ---
 apiVersion: v1
-data:
-  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJsekNDQVQyZ0F3SUJBZ0lSQUl6V1ZyQVE1ekpQSUZmb0dpeDM5NEV3Q2dZSUtvWkl6ajBFQXdJd0hERWEKTUJnR0ExVUVBeE1SYldGeWFXRmtZaTFuWVd4bGNtRXRZMkV3SGhjTk1qWXdNVEl6TURjeU9ETXlXaGNOTWprdwpNVEl5TURneU9ETXlXakFjTVJvd0dBWURWUVFERXhGdFlYSnBZV1JpTFdkaGJHVnlZUzFqWVRCWk1CTUdCeXFHClNNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJJWmtVU0ZyQW5BRGtGeGJaS0t4VDdoVFl0Slp6UGVJQ2Y2NWVGaFkKVWIvQk5wd3ZWWVNMdUc1S1p6R3pGa28rdVFOS3hleFA0dE8wQU1TQUxIamMzUCtqWURCZU1BNEdBMVVkRHdFQgovd1FFQXdJQ0JEQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01CMEdBMVVkRGdRV0JCVEpoYk9qNVJjV2FGR3o3YXpLCmhOTm5zTlJXOGpBY0JnTlZIUkVFRlRBVGdoRnRZWEpwWVdSaUxXZGhiR1Z5WVMxallUQUtCZ2dxaGtqT1BRUUQKQWdOSUFEQkZBaUVBcDB1UlpqajFyR2pSVnlrTGNZeHVXR0Y1Rk9ManZ4QnBFUnQxUjJVQUNDd0NJQUtLdmxnSwpldWtGUDRhMCt2MXc4V1k3TW5vZjREcU1mTVFzUUgrcUt2T0QKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-  ca.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUVGdzA3R0NxZndBNjM5RDlTZFc1aUNkNTdxSGZXcVlyclNvSllCNDE1M3RvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFaG1SUklXc0NjQU9RWEZ0a29yRlB1Rk5pMGxuTTk0Z0ovcmw0V0ZoUnY4RTJuQzlWaEl1NApia3BuTWJNV1NqNjVBMHJGN0UvaTA3UUF4SUFzZU56Yy93PT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
-kind: Secret
+kind: PersistentVolumeClaim
 metadata:
-  labels:
-    k8s.mariadb.com/watch: ''
-  name: mariadb-galera-ca
+  name: onap-policy-postgres-primary
   namespace: onap
-type: Opaque
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: smo-storage
 ---
 apiVersion: v1
-data:
-  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJsekNDQVQyZ0F3SUJBZ0lSQUl6V1ZyQVE1ekpQSUZmb0dpeDM5NEV3Q2dZSUtvWkl6ajBFQXdJd0hERWEKTUJnR0ExVUVBeE1SYldGeWFXRmtZaTFuWVd4bGNtRXRZMkV3SGhjTk1qWXdNVEl6TURjeU9ETXlXaGNOTWprdwpNVEl5TURneU9ETXlXakFjTVJvd0dBWURWUVFERXhGdFlYSnBZV1JpTFdkaGJHVnlZUzFqWVRCWk1CTUdCeXFHClNNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJJWmtVU0ZyQW5BRGtGeGJaS0t4VDdoVFl0Slp6UGVJQ2Y2NWVGaFkKVWIvQk5wd3ZWWVNMdUc1S1p6R3pGa28rdVFOS3hleFA0dE8wQU1TQUxIamMzUCtqWURCZU1BNEdBMVVkRHdFQgovd1FFQXdJQ0JEQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01CMEdBMVVkRGdRV0JCVEpoYk9qNVJjV2FGR3o3YXpLCmhOTm5zTlJXOGpBY0JnTlZIUkVFRlRBVGdoRnRZWEpwWVdSaUxXZGhiR1Z5WVMxallUQUtCZ2dxaGtqT1BRUUQKQWdOSUFEQkZBaUVBcDB1UlpqajFyR2pSVnlrTGNZeHVXR0Y1Rk9ManZ4QnBFUnQxUjJVQUNDd0NJQUtLdmxnSwpldWtGUDRhMCt2MXc4V1k3TW5vZjREcU1mTVFzUUgrcUt2T0QKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-kind: Secret
+kind: PersistentVolumeClaim
 metadata:
-  annotations:
-    traffic.sidecar.istio.io/excludeInboundPorts: 4444,4567,4568
-    traffic.sidecar.istio.io/excludeOutboundPorts: 4444,4567,4568,443
-    traffic.sidecar.istio.io/includeInboundPorts: '*'
-  labels:
-    app: mariadb-galera
-    sidecar.istio.io/inject: 'false'
-    version: 11.1.2
-  name: mariadb-galera-ca-bundle
+  name: onap-policy-postgres-replica
   namespace: onap
-type: Opaque
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: smo-storage
 ---
 apiVersion: v1
-data:
-  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJzakNDQVZtZ0F3SUJBZ0lSQUsyU1pZY09nWjlYbXU0OXVQZXV5OG93Q2dZSUtvWkl6ajBFQXdJd0hERWEKTUJnR0ExVUVBeE1SYldGeWFXRmtZaTFuWVd4bGNtRXRZMkV3SGhjTk1qWXdNVEl6TURjeU9ETXlXaGNOTWpZdwpOREl6TURneU9ETXlXakFnTVI0d0hBWURWUVFERXhWdFlYSnBZV1JpTFdkaGJHVnlZUzFqYkdsbGJuUXdXVEFUCkJnY3Foa2pPUFFJQkJnZ3Foa2pPUFFNQkJ3TkNBQVJ6OHV4dWFXeVpjMmd2THJpY1lrSzI0b0l3Rm82eFY3am4KVm5BdVlwR2E4UEkwRkRoY24vanc1WXdrQlIvK2lqblRyd1UxVURrTDlJbGNOemZUcmh0d28zZ3dkakFPQmdOVgpIUThCQWY4RUJBTUNBNGd3RXdZRFZSMGxCQXd3Q2dZSUt3WUJCUVVIQXdJd0RBWURWUjBUQVFIL0JBSXdBREFmCkJnTlZIU01FR0RBV2dCVEpoYk9qNVJjV2FGR3o3YXpLaE5ObnNOUlc4akFnQmdOVkhSRUVHVEFYZ2hWdFlYSnAKWVdSaUxXZGhiR1Z5WVMxamJHbGxiblF3Q2dZSUtvWkl6ajBFQXdJRFJ3QXdSQUlnZVNYTDZhVDBWNng3U3FETAo1TURsMzZ4cEhMMVk0RVJGNE1ScDBKNW5uVDBDSUh6Mzh5SEs0RlJvWnBQdUNCUjlieHRuSkxBV0NkT1VJZGlvCnpDcGJ2VVlYCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-  tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUtKUHJqLy90RWxMSWkvUmZ5c2luUi9PaENIOSs5NzZCcVJoYWcxdUoxdG9vQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFYy9Mc2JtbHNtWE5vTHk2NG5HSkN0dUtDTUJhT3NWZTQ1MVp3TG1LUm12RHlOQlE0WEovNAo4T1dNSkFVZi9vbzUwNjhGTlZBNUMvU0pYRGMzMDY0YmNBPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
-kind: Secret
+kind: PersistentVolumeClaim
 metadata:
-  labels:
-    k8s.mariadb.com/watch: ''
-  name: mariadb-galera-client-cert
+  name: onap-postgres-primary
   namespace: onap
-type: kubernetes.io/tls
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: smo-storage
 ---
 apiVersion: v1
-data:
-  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR5VENDQTIrZ0F3SUJBZ0lSQU9RZmZwNTh2Y1VBZ0NpdmI1d0RkaFV3Q2dZSUtvWkl6ajBFQXdJd0hERWEKTUJnR0ExVUVBeE1SYldGeWFXRmtZaTFuWVd4bGNtRXRZMkV3SGhjTk1qWXdNVEl6TURjeU9ETXlXaGNOTWpZdwpOREl6TURneU9ETXlXakF3TVM0d0xBWURWUVFERXlWdFlYSnBZV1JpTFdkaGJHVnlZUzV2Ym1Gd0xuTjJZeTVqCmJIVnpkR1Z5TG14dlkyRnNNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUV1Q3Y1SWE3QTBpUSsKUVhTZjk0KzFabDRhTkRtNlZjMXdOSm5UUzQwNHFDb25rR3U1a3ROT2poQ2xoWlZxMmV1dWkvcTdKMjkzTWlvTQpJSUk2Z1pVTUxhT0NBbnd3Z2dKNE1BNEdBMVVkRHdFQi93UUVBd0lEcURBVEJnTlZIU1VFRERBS0JnZ3JCZ0VGCkJRY0RBVEFNQmdOVkhSTUJBZjhFQWpBQU1COEdBMVVkSXdRWU1CYUFGTW1GczZQbEZ4Wm9VYlB0ck1xRTAyZXcKMUZieU1JSUNJQVlEVlIwUkJJSUNGekNDQWhPQ0pXMWhjbWxoWkdJdFoyRnNaWEpoTG05dVlYQXVjM1pqTG1OcwpkWE4wWlhJdWJHOWpZV3lDRjIxaGNtbGhaR0l0WjJGc1pYSmhMbTl1WVhBdWMzWmpnaE50WVhKcFlXUmlMV2RoCmJHVnlZUzV2Ym1Gd2dnNXRZWEpwWVdSaUxXZGhiR1Z5WVlJd0tpNXRZWEpwWVdSaUxXZGhiR1Z5WVMxcGJuUmwKY201aGJDNXZibUZ3TG5OMll5NWpiSFZ6ZEdWeUxteHZZMkZzZ2lJcUxtMWhjbWxoWkdJdFoyRnNaWEpoTFdsdQpkR1Z5Ym1Gc0xtOXVZWEF1YzNaamdoNHFMbTFoY21saFpHSXRaMkZzWlhKaExXbHVkR1Z5Ym1Gc0xtOXVZWENDCkdTb3ViV0Z5YVdGa1lpMW5ZV3hsY21FdGFXNTBaWEp1WVd5Q0xXMWhjbWxoWkdJdFoyRnNaWEpoTFhCeWFXMWgKY25rdWIyNWhjQzV6ZG1NdVkyeDFjM1JsY2k1c2IyTmhiSUlmYldGeWFXRmtZaTFuWVd4bGNtRXRjSEpwYldGeQplUzV2Ym1Gd0xuTjJZNEliYldGeWFXRmtZaTFuWVd4bGNtRXRjSEpwYldGeWVTNXZibUZ3Z2hadFlYSnBZV1JpCkxXZGhiR1Z5WVMxd2NtbHRZWEo1Z2k5dFlYSnBZV1JpTFdkaGJHVnlZUzF6WldOdmJtUmhjbmt1YjI1aGNDNXoKZG1NdVkyeDFjM1JsY2k1c2IyTmhiSUloYldGeWFXRmtZaTFuWVd4bGNtRXRjMlZqYjI1a1lYSjVMbTl1WVhBdQpjM1pqZ2gxdFlYSnBZV1JpTFdkaGJHVnlZUzF6WldOdmJtUmhjbmt1YjI1aGNJSVliV0Z5YVdGa1lpMW5ZV3hsCmNtRXRjMlZqYjI1a1lYSjVnZ2xzYjJOaGJHaHZjM1F3Q2dZSUtvWkl6ajBFQXdJRFNBQXdSUUlnSXJZRmdPcUYKRmdkeDJmSGhDZS9MNFhCcFNEOUhPYzJ0OEhiTHRlcmpjckFDSVFEdzhTL0xDNXBLaitnV3g0Vzh3K2tXdEtaUgp4b25rT3RhWk1YU1FVRzQ0VVE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
-  tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUZzVTE2VmRDa29sWUJhZVhHSHhJMU1BRW5Pd0JvTnV6aitaSmFGVUM4ZEFvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFdUN2NUlhN0EwaVErUVhTZjk0KzFabDRhTkRtNlZjMXdOSm5UUzQwNHFDb25rR3U1a3ROTwpqaENsaFpWcTJldXVpL3E3SjI5M01pb01JSUk2Z1pVTUxRPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
-kind: Secret
+kind: PersistentVolumeClaim
 metadata:
-  labels:
-    k8s.mariadb.com/watch: ''
-  name: mariadb-galera-server-cert
+  name: onap-postgres-replica
   namespace: onap
-type: kubernetes.io/tls
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: smo-storage
 ---
 apiVersion: v1
-data:
-  login: bWFyaWFiYWNrdXA=
-  password: SmUxNUViVDc=
-kind: Secret
+kind: Service
 metadata:
-  labels:
-    app: mariadb-galera
-    app.kubernetes.io/instance: onap-mariadb-galera
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: mariadb-galera
-    helm.sh/chart: mariadb-galera-16.0.0
-    version: 16.0.0
-  name: onap-mariadb-galera-db-backup-credentials
+  name: tcp-pgset-primary
   namespace: onap
-type: Opaque
+spec:
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres-primary
 ---
 apiVersion: v1
-data:
-  password: R1hmNTRyRXo=
-kind: Secret
+kind: Service
 metadata:
-  labels:
-    app: mariadb-galera
-    app.kubernetes.io/instance: onap-mariadb-galera
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: mariadb-galera
-    helm.sh/chart: mariadb-galera-16.0.0
-    version: 16.0.0
-  name: onap-mariadb-galera-db-root-password
+  name: tcp-pgset-replica
   namespace: onap
-type: Opaque
----
-apiVersion: v1
-data:
-  login: bXktdXNlcg==
-  password: b29hMkZzazE=
-kind: Secret
-metadata:
-  labels:
-    app: mariadb-galera
-    app.kubernetes.io/instance: onap-mariadb-galera
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: mariadb-galera
-    helm.sh/chart: mariadb-galera-16.0.0
-    version: 16.0.0
-  name: onap-mariadb-galera-db-user-credentials
-  namespace: onap
-type: Opaque
----
-apiVersion: v1
-data:
-  password: SkVNOTllU2M=
-kind: Secret
-metadata:
-  labels:
-    app: policy-postgres
-    app.kubernetes.io/instance: onap-policy
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: policy-postgres
-    helm.sh/chart: postgres-13.1.0
-    version: 13.1.0
-  name: onap-policy-postgres-primary-password
-  namespace: onap
-type: Opaque
----
-apiVersion: v1
-data:
-  password: YUMyNmtJejk=
-kind: Secret
-metadata:
-  labels:
-    app: postgres
-    app.kubernetes.io/instance: onap-postgres
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: postgres
-    helm.sh/chart: postgres-13.1.0
-    version: 13.1.0
-  name: onap-postgres-db-root-password
-  namespace: onap
-type: Opaque
----
-apiVersion: v1
-data:
-  login: dGVzdHVzZXI=
-  password: VkxwNzFmckE=
-kind: Secret
-metadata:
-  labels:
-    app: postgres
-    app.kubernetes.io/instance: onap-postgres
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: postgres
-    helm.sh/chart: postgres-13.1.0
-    version: 13.1.0
-  name: onap-postgres-db-user-credentials
-  namespace: onap
-type: Opaque
----
-apiVersion: v1
-data:
-  password: S09WOThHU2o=
-kind: Secret
-metadata:
-  labels:
-    app: postgres
-    app.kubernetes.io/instance: onap-postgres
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: postgres
-    helm.sh/chart: postgres-13.1.0
-    version: 13.1.0
-  name: onap-postgres-primary-password
-  namespace: onap
-type: Opaque
+spec:
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres-replica
