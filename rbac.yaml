@@ -379,14 +379,23 @@ rules:
   - kafka.strimzi.io
   resources:
   - kafkas
+  - kafkas/status
   - kafkaconnects
+  - kafkaconnects/status
   - kafkaconnectors
+  - kafkaconnectors/status
   - kafkamirrormaker2s
+  - kafkamirrormaker2s/status
   - kafkabridges
+  - kafkabridges/status
   - kafkarebalances
+  - kafkarebalances/status
   - kafkatopics
+  - kafkatopics/status
   - kafkausers
+  - kafkausers/status
   - kafkanodepools
+  - kafkanodepools/status
   verbs:
   - get
   - list
@@ -399,6 +408,7 @@ rules:
   - core.strimzi.io
   resources:
   - strimzipodsets
+  - strimzipodsets/status
   verbs:
   - get
   - list
