@@ -518,3 +518,63 @@ rules:
   - get
   - list
   - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: strimzi-entity-operator
+  namespace: onap
+  labels:
+    app: strimzi
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+rules:
+  - apiGroups:
+      - "kafka.strimzi.io"
+    resources:
+      - kafkatopics
+      - kafkatopics/status
+      - kafkausers
+      - kafkausers/status
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - delete
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - delete
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: strimzi-entity-operator-binding
+  namespace: onap
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: strimzi-entity-operator
+subjects:
+  - kind: ServiceAccount
+    name: onap-strimzi-entity-operator
+    namespace: onap
