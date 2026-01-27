@@ -1048,9 +1048,7 @@ metadata:
   name: mariadb-galera
   namespace: onap
 spec:
-  clusterIP: 10.104.173.202
-  clusterIPs:
-  - 10.104.173.202
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -1111,9 +1109,7 @@ metadata:
   name: policy-postgres
   namespace: onap
 spec:
-  clusterIP: 10.96.214.54
-  clusterIPs:
-  - 10.96.214.54
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4

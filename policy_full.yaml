@@ -1767,9 +1767,7 @@ metadata:
   name: policy-apex-pdp
   namespace: onap
 spec:
-  clusterIP: 10.101.6.45
-  clusterIPs:
-  - 10.101.6.45
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -1798,9 +1796,7 @@ metadata:
   name: policy-api
   namespace: onap
 spec:
-  clusterIP: 10.101.41.120
-  clusterIPs:
-  - 10.101.41.120
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -1829,9 +1825,7 @@ metadata:
   name: policy-clamp-ac-a1pms-ppnt
   namespace: onap
 spec:
-  clusterIP: 10.100.12.167
-  clusterIPs:
-  - 10.100.12.167
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -1860,9 +1854,7 @@ metadata:
   name: policy-clamp-ac-http-ppnt
   namespace: onap
 spec:
-  clusterIP: 10.103.209.214
-  clusterIPs:
-  - 10.103.209.214
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -1891,9 +1883,7 @@ metadata:
   name: policy-clamp-ac-pf-ppnt
   namespace: onap
 spec:
-  clusterIP: 10.101.68.24
-  clusterIPs:
-  - 10.101.68.24
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -1922,9 +1912,7 @@ metadata:
   name: policy-clamp-runtime-acm
   namespace: onap
 spec:
-  clusterIP: 10.101.99.21
-  clusterIPs:
-  - 10.101.99.21
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -1953,9 +1941,7 @@ metadata:
   name: policy-pap
   namespace: onap
 spec:
-  clusterIP: 10.107.161.105
-  clusterIPs:
-  - 10.107.161.105
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -1987,9 +1973,7 @@ metadata:
   name: policy-pg-primary
   namespace: onap
 spec:
-  clusterIP: 10.103.98.143
-  clusterIPs:
-  - 10.103.98.143
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -2017,9 +2001,7 @@ metadata:
   name: policy-pg-replica
   namespace: onap
 spec:
-  clusterIP: 10.109.95.81
-  clusterIPs:
-  - 10.109.95.81
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4

@@ -220,9 +220,7 @@ metadata:
   name: dcae-ves-collector
   namespace: onap
 spec:
-  clusterIP: 10.98.137.74
-  clusterIPs:
-  - 10.98.137.74
+
   externalTrafficPolicy: Cluster
   internalTrafficPolicy: Cluster
   ipFamilies:

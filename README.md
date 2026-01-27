@@ -55,3 +55,25 @@ Once applied, ArgoCD will automatically sync the repository.
 
 ---
 **Note**: These manifests are snapshots of a verified working state. They have been sanitized of cluster-specific UID/metadata to prevent sync conflicts in GitOps.
+
+
+NAME                                                READY   STATUS    RESTARTS       AGE
+mariadb-galera-0                                    1/1     Running   0              27m
+onap-dcae-ves-collector-546c98c765-wvkpf            2/2     Running   0              27m
+onap-policy-apex-pdp-d458bbcbb-4lv5t                1/1     Running   0              27m
+onap-policy-api-85d85ccf84-mnbwj                    1/1     Running   0              27m
+onap-policy-clamp-ac-a1pms-ppnt-6b7896f5b7-qxvmn    1/1     Running   0              27m
+onap-policy-clamp-ac-http-ppnt-5d46545bfb-5nm7t     1/1     Running   0              27m
+onap-policy-clamp-ac-k8s-ppnt-5df98fdc6c-k4hl8      1/1     Running   0              27m
+onap-policy-clamp-ac-kserve-ppnt-77f55f9c75-m8r9z   1/1     Running   0              27m
+onap-policy-clamp-ac-pf-ppnt-757fdb4687-gcpnv       1/1     Running   0              27m
+onap-policy-clamp-runtime-acm-78c6d8588c-xb9r4      1/1     Running   0              27m
+onap-policy-pap-668b55cfd-w9bjf                     1/1     Running   0              27m
+onap-policy-postgres-primary-f76cb64c-mkgwq         1/1     Running   0              27m
+onap-policy-postgres-replica-6887f9856f-2bk7b       1/1     Running   1 (27m ago)    27m
+onap-postgres-primary-66c8dff577-tdtrz              1/1     Running   0              27m
+onap-postgres-replica-86b64c8455-g55g5              1/1     Running   0              27m
+onap-strimzi-entity-operator-587b94dc9-tvcrm        2/2     Running   10 (23m ago)   27m
+onap-strimzi-kafka-bridge-857dff6bdd-m9ht9          1/1     Running   0              27m
+onap-strimzi-onap-strimzi-broker-0                  1/1     Running   0              22m
+onap-strimzi-onap-strimzi-controller-1              1/1     Running   0              22m

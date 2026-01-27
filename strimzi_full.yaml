@@ -410,9 +410,7 @@ metadata:
   name: onap-strimzi-kafka-bootstrap
   namespace: onap
 spec:
-  clusterIP: 10.111.247.146
-  clusterIPs:
-  - 10.111.247.146
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -460,9 +458,7 @@ metadata:
   name: onap-strimzi-kafka-bridge-service
   namespace: onap
 spec:
-  clusterIP: 10.100.87.40
-  clusterIPs:
-  - 10.100.87.40
+
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4
@@ -545,9 +541,7 @@ metadata:
   name: onap-strimzi-kafka-external-bootstrap
   namespace: onap
 spec:
-  clusterIP: 10.102.133.31
-  clusterIPs:
-  - 10.102.133.31
+
   externalTrafficPolicy: Cluster
   internalTrafficPolicy: Cluster
   ipFamilies:
@@ -583,9 +577,7 @@ metadata:
   name: onap-strimzi-onap-strimzi-broker-0
   namespace: onap
 spec:
-  clusterIP: 10.109.233.236
-  clusterIPs:
-  - 10.109.233.236
+
   externalTrafficPolicy: Cluster
   internalTrafficPolicy: Cluster
   ipFamilies:
