@@ -109,7 +109,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: sasl.jaas.config
-              name: policy-apex-pdp-ku
+              name: onap-policy-kafka-user
         - name: KAFKA_URL
           value: onap-strimzi-kafka-bootstrap:9092
         - name: SASL
@@ -593,7 +593,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: sasl.jaas.config
-              name: policy-clamp-ac-a1pms-ppnt-ku
+              name: onap-policy-kafka-user
         image: nexus3.onap.org:10001/dibi/envsubst:latest
         imagePullPolicy: IfNotPresent
         name: policy-clamp-ac-a1pms-ppnt-update-config
@@ -753,7 +753,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: sasl.jaas.config
-              name: policy-clamp-ac-http-ppnt-ku
+              name: onap-policy-kafka-user
         image: nexus3.onap.org:10001/dibi/envsubst:latest
         imagePullPolicy: IfNotPresent
         name: policy-clamp-ac-http-ppnt-update-config
@@ -917,7 +917,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: sasl.jaas.config
-              name: policy-clamp-ac-k8s-ppnt-ku
+              name: onap-policy-kafka-user
         image: nexus3.onap.org:10001/dibi/envsubst:latest
         imagePullPolicy: IfNotPresent
         name: policy-clamp-ac-k8s-ppnt-update-config
@@ -1081,7 +1081,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: sasl.jaas.config
-              name: policy-clamp-ac-kserve-ppnt-ku
+              name: onap-policy-kafka-user
         image: nexus3.onap.org:10001/dibi/envsubst:latest
         imagePullPolicy: IfNotPresent
         name: policy-clamp-ac-kserve-ppnt-update-config
@@ -1261,7 +1261,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: sasl.jaas.config
-              name: policy-clamp-ac-pf-ppnt-ku
+              name: onap-policy-kafka-user
         image: nexus3.onap.org:10001/dibi/envsubst:latest
         imagePullPolicy: IfNotPresent
         name: policy-clamp-ac-pf-ppnt-update-config
@@ -1465,7 +1465,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: sasl.jaas.config
-              name: policy-clamp-runtime-acm-ku
+              name: onap-policy-kafka-user
         image: nexus3.onap.org:10001/dibi/envsubst:latest
         imagePullPolicy: IfNotPresent
         name: policy-clamp-runtime-acm-update-config
@@ -1703,7 +1703,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: sasl.jaas.config
-              name: policy-pap-ku
+              name: onap-policy-kafka-user
         image: nexus3.onap.org:10001/dibi/envsubst:latest
         imagePullPolicy: IfNotPresent
         name: policy-pap-update-config
