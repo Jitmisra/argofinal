@@ -371,7 +371,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: strimzi-cluster-operator-custom-global
+  name: strimzi-cluster-operator-global
   annotations:
     argocd.argoproj.io/sync-wave: "-3"
 rules:
@@ -488,13 +488,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: strimzi-cluster-operator-custom-global-binding
+  name: strimzi-cluster-operator-global-binding
   annotations:
     argocd.argoproj.io/sync-wave: "-3"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: strimzi-cluster-operator-custom-global
+  name: strimzi-cluster-operator-global
 subjects:
 - kind: ServiceAccount
   name: strimzi-cluster-operator
