@@ -56,6 +56,7 @@ Once applied, ArgoCD will automatically sync the repository.
 ---
 **Note**: These manifests are snapshots of a verified working state. They have been sanitized of cluster-specific UID/metadata to prevent sync conflicts in GitOps.
 
+```
 
 NAME                                                READY   STATUS    RESTARTS       AGE
 mariadb-galera-0                                    1/1     Running   0              27m
@@ -77,3 +78,4 @@ onap-strimzi-entity-operator-587b94dc9-tvcrm        2/2     Running   10 (23m ag
 onap-strimzi-kafka-bridge-857dff6bdd-m9ht9          1/1     Running   0              27m
 onap-strimzi-onap-strimzi-broker-0                  1/1     Running   0              22m
 onap-strimzi-onap-strimzi-controller-1              1/1     Running   0              22m
+```
